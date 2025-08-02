@@ -5,6 +5,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -80,6 +81,49 @@ func writeFile(filename string, data []byte) error {
 	return saveMetadata(filename, blockIDs)
 }
 
+func readFile(filename string) ([]byte, error) {
+	fmt.Printf("\n--- Reading file: %s ---\n", filename)
+
+	// 1. load the metadata to find which blocks to read
+	meta, err := loadMetadata()
+	if err != nil {
+		return nil, err
+	}
+	blockIDs, ok := meta[filename]
+	if !ok {
+		return nil, fmt.Errorf("file %s not found in metadata", filename)
+	}
+
+	// create a slice to hold the data from each block
+	// this is a crucial for maintaining the correct order after concurrent reads.
+	fileChunks := make([][]byte, len(blockIDs))
+	var wg sync.WaitGroup
+
+	// 2. read all block files concurrently
+	for i, blockID := range blockIDs {
+		wg.Add(1)
+		go func(index int, id string) {
+			defer wg.Done()
+			path := filepath.Join(BlocksDir, id)
+			fmt.Printf(" <-- reading block from %s\n", path)
+			chunk, err := os.ReadFile(path)
+			if err != nil {
+				fmt.Printf("ERROR reading block %s: %v\n", path, err)
+				return
+			}
+
+			fileChunks[index] = chunk
+		}(i, blockID)
+	}
+
+	wg.Wait()
+	fmt.Println("All blocks read from disk")
+
+	// 4. merge all chunks into a single []byte
+	fullFile := bytes.Join(fileChunks, []byte{})
+	return fullFile, nil
+}
+
 func saveMetadata(filename string, blockIDs []string) error {
 	meta, err := loadMetadata()
 	if err != nil && !os.IsNotExist(err) {
@@ -128,4 +172,22 @@ func main() {
 		return
 	}
 
+	// 3. read a file from disk
+	retrieveContent, err := readFile(filename)
+	if err != nil {
+		fmt.Printf("Failed to read file: %v\n", err)
+		return
+	}
+
+	fmt.Printf("Read %d bytes from the block storage\n", len(retrieveContent))
+
+	// 4. Verify that the original and retrieved content are identical.
+	fmt.Println("\n--- Verification ---")
+	if bytes.Equal(data, retrieveContent) {
+		fmt.Println("File content are identical")
+	} else {
+		fmt.Println("ERROR, the content does not match")
+	}
+
+	fmt.Printf("original size %d, retrieved size %d", len(data), len(retrieveContent))
 }
