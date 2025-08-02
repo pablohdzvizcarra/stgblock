@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"net"
 	"os"
 	"path/filepath"
 	"sync"
@@ -21,7 +22,8 @@ const (
 	// Directory to share our block storage.
 	BlocksDir = "./blocks"
 	// The file that accts as our file system index
-	MetadataFile = "metadata.json"
+	MetadataFile           = "metadata.json"
+	ApplicationPort string = ":8001"
 )
 
 // Metadata maps a user-facing filename to an ordered slice of blocks IDs.
@@ -157,37 +159,64 @@ func loadMetadata() (Metadata, error) {
 }
 
 func main() {
-
-	// 1. Reading a file from disk
-	data, err := os.ReadFile("/Users/pablohernadez/Documents/GitHub/storage-software-cookbook/data/mobibick_book.txt")
+	listener, err := net.Listen("tcp", ApplicationPort)
 	if err != nil {
-		fmt.Printf("An error occurred reading the book file: %v\n", err)
+		fmt.Printf("Error while starting the TCP server: %v\n", err)
 		return
 	}
 
-	// 2. Writing the file on the block storage system
-	filename := "mobibick_book.txt"
-	if err := writeFile(filename, data); err != nil {
-		fmt.Printf("Failed to write file: %v\n", err)
-		return
+	defer listener.Close()
+	fmt.Printf("TCP server listening on port: %s\n", ApplicationPort)
+
+	for {
+		// Wait for a connection
+		conn, err := listener.Accept()
+		if err != nil {
+			fmt.Printf("Error accepting client connection: %v\n", err)
+			continue
+		}
+
+		go handleClientConnection(conn)
 	}
-
-	// 3. read a file from disk
-	retrieveContent, err := readFile(filename)
-	if err != nil {
-		fmt.Printf("Failed to read file: %v\n", err)
-		return
-	}
-
-	fmt.Printf("Read %d bytes from the block storage\n", len(retrieveContent))
-
-	// 4. Verify that the original and retrieved content are identical.
-	fmt.Println("\n--- Verification ---")
-	if bytes.Equal(data, retrieveContent) {
-		fmt.Println("File content are identical")
-	} else {
-		fmt.Println("ERROR, the content does not match")
-	}
-
-	fmt.Printf("original size %d, retrieved size %d", len(data), len(retrieveContent))
 }
+
+func handleClientConnection(conn net.Conn) {
+	defer conn.Close()
+	fmt.Printf("Client connected: %v\n", conn.RemoteAddr())
+}
+
+// func main() {
+
+// 	// 1. Reading a file from disk
+// 	data, err := os.ReadFile("/Users/pablohernadez/Documents/GitHub/storage-software-cookbook/data/mobibick_book.txt")
+// 	if err != nil {
+// 		fmt.Printf("An error occurred reading the book file: %v\n", err)
+// 		return
+// 	}
+
+// 	// 2. Writing the file on the block storage system
+// 	filename := "mobibick_book.txt"
+// 	if err := writeFile(filename, data); err != nil {
+// 		fmt.Printf("Failed to write file: %v\n", err)
+// 		return
+// 	}
+
+// 	// 3. read a file from disk
+// 	retrieveContent, err := readFile(filename)
+// 	if err != nil {
+// 		fmt.Printf("Failed to read file: %v\n", err)
+// 		return
+// 	}
+
+// 	fmt.Printf("Read %d bytes from the block storage\n", len(retrieveContent))
+
+// 	// 4. Verify that the original and retrieved content are identical.
+// 	fmt.Println("\n--- Verification ---")
+// 	if bytes.Equal(data, retrieveContent) {
+// 		fmt.Println("File content are identical")
+// 	} else {
+// 		fmt.Println("ERROR, the content does not match")
+// 	}
+
+// 	fmt.Printf("original size %d, retrieved size %d", len(data), len(retrieveContent))
+// }
