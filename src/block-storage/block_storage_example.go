@@ -203,6 +203,11 @@ func StartApplication() (net.Listener, error) {
 	return listener, nil
 }
 
+// handleClientConnection manage a client connection.
+//
+// Clients needs to send a '\n' character to the server terminates of read the bytes and interprets
+// tha bytes as a message.
+// The '\n' can see as the character stuffing technique
 func handleClientConnection(conn net.Conn) {
 	defer conn.Close()
 	fmt.Printf("Client connected: %v\n", conn.RemoteAddr())
