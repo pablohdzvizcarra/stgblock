@@ -46,12 +46,22 @@ func TestDecodeMessage(t *testing.T) {
 			},
 		},
 		"parse correct the filename from the rawData": {
-			input: []byte{1, 8, 100, 97, 116, 97, 46, 116, 120, 116},
+			input: []byte{1, 8, 100, 97, 116, 97, 46, 116, 120, 116, 0, 0, 0, 0},
 			output: Message{
 				messageType:    MessageRead,
 				filenameLength: 8,
 				filename:       "data.txt",
 				size:           0,
+				rawData:        nil,
+			},
+		},
+		"read the size of the message": {
+			input: []byte{1, 8, 100, 97, 116, 97, 46, 116, 120, 116, 0, 0, 0, 6},
+			output: Message{
+				messageType:    MessageRead,
+				filenameLength: 8,
+				filename:       "data.txt",
+				size:           6,
 				rawData:        nil,
 			},
 		},

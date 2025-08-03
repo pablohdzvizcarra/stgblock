@@ -1,5 +1,7 @@
 package protocol
 
+import "encoding/binary"
+
 type MessageType int
 
 const (
@@ -14,7 +16,7 @@ type Message struct {
 	messageType    MessageType
 	filenameLength int
 	filename       string
-	size           int
+	size           uint32
 	rawData        []byte
 }
 
@@ -51,9 +53,14 @@ func DecodeMessage(rawData []byte) Message {
 	filename := string(rawData[offset : filenameLength+2])
 	offset += len(filename)
 
+	// Read the size of the message
+	fileSizeChunk := rawData[offset : offset+4]
+	fileSize := binary.BigEndian.Uint32(fileSizeChunk)
+
 	return Message{
 		messageType:    messageType,
 		filenameLength: int(filenameLength),
 		filename:       filename,
+		size:           fileSize,
 	}
 }
