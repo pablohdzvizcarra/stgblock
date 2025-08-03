@@ -17,6 +17,7 @@ import (
 	"syscall"
 
 	"github.com/google/uuid"
+	"github.com/pablohdzvizcarra/storage-software-cookbook/protocol"
 )
 
 const (
@@ -215,6 +216,13 @@ func handleClientConnection(conn net.Conn) {
 		}
 
 		fmt.Printf("Receiving [%d] bytes from the client\n", len(message))
-		fmt.Printf("received message from client: %s", message)
+		fmt.Println("Serializing the raw data from the client into a message format")
+		msg, err := protocol.DecodeMessage(message)
+		if err != nil {
+			fmt.Printf("An error occurred parsing the message\n")
+			continue
+		}
+
+		fmt.Println(msg)
 	}
 }

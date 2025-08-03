@@ -6,6 +6,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const MessageEndChar = 0x0A
+
 func TestDecodeMessage(t *testing.T) {
 	tests := map[string]struct {
 		input  []byte
@@ -56,7 +58,13 @@ func TestDecodeMessage(t *testing.T) {
 			},
 		},
 		"read the size of the message": {
-			input: []byte{1, 8, 100, 97, 116, 97, 46, 116, 120, 116, 0, 0, 0, 6},
+			input: []byte{
+				1,
+				8,
+				100, 97, 116, 97, 46, 116, 120, 116,
+				0, 0, 0, 6,
+				0x00, 0x00,
+			},
 			output: Message{
 				messageType:    MessageRead,
 				filenameLength: 8,
@@ -68,7 +76,13 @@ func TestDecodeMessage(t *testing.T) {
 		},
 		"error if the length of the message not match with the message length": {
 			fails: true,
-			input: []byte{1, 8, 100, 97, 116, 97, 46, 116, 120, 116, 0, 0, 0, 6, 0x48, 0x65, 0x6C, 0x6C, 0x6F, 0x20, 0x57, 0x6F, 0x72, 0x6C, 0x64},
+			input: []byte{
+				1,
+				8,
+				100, 97, 116, 97, 46, 116, 120, 116,
+				0, 0, 0, 6,
+				0x48, 0x65, 0x6C, 0x6C, 0x6F, 0x20, 0x57, 0x6F, 0x72, 0x6C, 0x64,
+			},
 			output: Message{
 				messageType:    MessageRead,
 				filenameLength: 8,
@@ -85,6 +99,7 @@ func TestDecodeMessage(t *testing.T) {
 				100, 97, 116, 97, 46, 116, 120, 116,
 				0, 0, 0, 0x0B,
 				0x48, 0x65, 0x6C, 0x6C, 0x6F, 0x20, 0x57, 0x6F, 0x72, 0x6C, 0x64,
+				MessageEndChar,
 			},
 			output: Message{
 				messageType:    MessageWrite,

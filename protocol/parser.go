@@ -77,7 +77,7 @@ func DecodeMessage(rawData []byte) (Message, error) {
 	}
 
 	// Read the message content from the raw data
-	messageContent := rawData[offset:]
+	messageContent := rawData[offset : len(rawData)-1]
 
 	// With this validation we are avoiding byte overflow vulnerability
 	if uint32(len(messageContent)) != fileSize {
