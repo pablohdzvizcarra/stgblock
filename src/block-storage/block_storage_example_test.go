@@ -42,7 +42,7 @@ func TestSendWriteMessage(t *testing.T) {
 		output []byte
 	}{
 		"client can create a connection": {
-			[]byte("hello world"),
+			[]byte("hello world\n"),
 			[]byte(""),
 		},
 	}

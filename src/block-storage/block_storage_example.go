@@ -208,12 +208,13 @@ func handleClientConnection(conn net.Conn) {
 	reader := bufio.NewReader(conn)
 
 	for {
-		message, err := reader.ReadString('\n')
+		message, err := reader.ReadBytes('\n')
 		if err != nil {
 			fmt.Printf("Error reading data from the client: %v\n", err)
 			break
 		}
 
+		fmt.Printf("Receiving [%d] bytes from the client\n", len(message))
 		fmt.Printf("received message from client: %s", message)
 	}
 }
