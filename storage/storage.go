@@ -15,8 +15,10 @@ const (
 	// The fixed size for each storage block, is 256 kilobyte.
 	BlockSize = 256000
 	// Directory to share our block storage.
+	// FIXME: refactor code to use absolute paths
 	BlocksDir = "./blocks"
 	// The file that acts as our file system index
+	// FIXME: refactor code to use absolute paths
 	MetadataFile = "metadata.json"
 )
 
@@ -36,17 +38,23 @@ func WriteFile(filename string, data []byte) error {
 
 	// Review if the file was already saved
 	metadataMutex.Lock()
-	defer metadataMutex.Unlock()
 	meta, err := loadMetadata()
 	if err != nil {
+		metadataMutex.Unlock()
 		fmt.Println("An error occurred when reading the metadata from disk")
+		return err
 	}
 
-	_, exists := meta[filename]
-	if exists {
-		fmt.Printf("The file %s already exists, skipping....", filename)
+	// TODO: add better logic to determine if the file already exists
+	// Maybe a deep comparison of the file content?
+	// For now, we just check if the filename is already in the metadata
+	if _, exists := meta[filename]; exists {
+		metadataMutex.Unlock()
+		fmt.Printf("The file %s already exists, skipping....\n", filename)
 		return nil
 	}
+
+	metadataMutex.Unlock()
 
 	// loop through the data in BlockSize chunks
 	for i := 0; i < len(data); i += BlockSize {
@@ -125,6 +133,7 @@ func ReadFile(filename string) ([]byte, error) {
 }
 
 func saveMetadata(filename string, blockIDs []string) error {
+	fmt.Printf("Attempting to update metadata for file: %s\n", filename)
 	metadataMutex.Lock()
 	defer metadataMutex.Unlock()
 
@@ -144,13 +153,19 @@ func saveMetadata(filename string, blockIDs []string) error {
 		return err
 	}
 
-	fmt.Printf("Saving metadata for %s...\n", filename)
+	fmt.Printf("Updated metadata for file %s\n", filename)
 	return os.WriteFile(MetadataFile, jsonData, 0644)
 }
 
 // loadMetadata loads the metadata
 func loadMetadata() (Metadata, error) {
 	jsonData, err := os.ReadFile(MetadataFile)
+	// create metadata file if it doesn't exist
+	if os.IsNotExist(err) {
+		fmt.Println("Metadata file does not exist, creating a new one.")
+		return make(Metadata), nil
+	}
+
 	if err != nil {
 		return nil, err
 	}

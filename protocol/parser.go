@@ -16,11 +16,11 @@ const (
 // The array of bytes have the following format:
 // [messageType(1 byte)][filenameLength(1 byte)][filename][size(4 bytes)][content]
 type Message struct {
-	messageType    MessageType
-	filenameLength int
-	filename       string
-	size           uint32
-	rawData        []byte
+	MessageType    MessageType
+	FilenameLength int
+	Filename       string
+	Size           uint32
+	RawData        []byte
 }
 
 // DecodeMessage interprets the raw data received from the server and returns a Message struct.
@@ -48,7 +48,7 @@ func DecodeMessage(rawData []byte) (Message, error) {
 
 	if filenameLength < 1 {
 		return Message{
-			messageType: messageType,
+			MessageType: messageType,
 		}, fmt.Errorf("the filename length could not be less than 1")
 	}
 
@@ -57,8 +57,8 @@ func DecodeMessage(rawData []byte) (Message, error) {
 	offset += len(filename)
 	if filename == "" {
 		return Message{
-			messageType:    messageType,
-			filenameLength: filenameLength,
+			MessageType:    messageType,
+			FilenameLength: filenameLength,
 		}, fmt.Errorf("the filename cannot be empty")
 	}
 
@@ -69,10 +69,10 @@ func DecodeMessage(rawData []byte) (Message, error) {
 
 	if fileSize < 1 {
 		return Message{
-			messageType:    messageType,
-			filenameLength: filenameLength,
-			filename:       filename,
-			size:           fileSize,
+			MessageType:    messageType,
+			FilenameLength: filenameLength,
+			Filename:       filename,
+			Size:           fileSize,
 		}, fmt.Errorf("file size could not be negative")
 	}
 
@@ -82,18 +82,18 @@ func DecodeMessage(rawData []byte) (Message, error) {
 	// With this validation we are avoiding byte overflow vulnerability
 	if uint32(len(messageContent)) != fileSize {
 		return Message{
-			messageType:    messageType,
-			filenameLength: filenameLength,
-			filename:       filename,
-			size:           fileSize,
+			MessageType:    messageType,
+			FilenameLength: filenameLength,
+			Filename:       filename,
+			Size:           fileSize,
 		}, fmt.Errorf("the message content not match with the length")
 	}
 
 	return Message{
-		messageType:    messageType,
-		filenameLength: int(filenameLength),
-		filename:       filename,
-		size:           fileSize,
-		rawData:        messageContent,
+		MessageType:    messageType,
+		FilenameLength: int(filenameLength),
+		Filename:       filename,
+		Size:           fileSize,
+		RawData:        messageContent,
 	}, nil
 }

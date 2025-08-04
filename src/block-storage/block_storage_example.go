@@ -12,6 +12,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/pablohdzvizcarra/storage-software-cookbook/handler"
 	"github.com/pablohdzvizcarra/storage-software-cookbook/protocol"
 )
 
@@ -82,6 +83,8 @@ func handleClientConnection(conn net.Conn) {
 			fmt.Printf("An error occurred parsing the message\n")
 			continue
 		}
+
+		handler.HandleMessage(msg)
 
 		fmt.Println(msg)
 	}
