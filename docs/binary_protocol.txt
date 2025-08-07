@@ -1,0 +1,30 @@
+========================================================================================
+CLIENT RESPONSES
+========================================================================================
+
+The client responses have the following format:
+
+- [statusCode(1 byte)] 
+- [errorCode (2 bytes)]
+- [payloadLength (4 bytes)]
+- [payload (payloadLength bytes)]
+
+-------------------
+Status Codes:
+- 0x00: Success
+- 0x01: Error
+
+-------------------
+Error Codes:
+- 0x0001 = NotFound
+- 0x0002 = PermissionDenied
+- 0x0003 = BadRequest
+
+-------------------
+Payload Length
+- uint32 4 bytes representing the length of the payload in bytes.
+
+-------------------
+Payload
+- if statusCode == 0x00, this is the "successful" data (e.g. the block's bytes on a READ)
+- if statusCode == 0x01, this is an ASCII or UTF-8 error message string.
