@@ -89,3 +89,34 @@ func CreateClientResponseOk() (Response, error) {
 		Payload:       nil,
 	}, nil
 }
+
+func EncodeMessage(msg Response) ([]byte, error) {
+	// Read the status (byte 0)
+	status := byte(msg.Status)
+
+	// Read the error code (byte 1-2)
+	errorCode := uint16(msg.Error)
+
+	// Read the payload length (bytes 3-6)
+	payloadLength := uint32(msg.PayloadLength)
+
+	// Read the payload (bytes 7-n)
+	var payload []byte
+	if payloadLength == 0 {
+		payload = nil
+	}
+
+	// build the response message
+	response := make([]byte, 7+len(payload)+1)
+	response[0] = status
+	binary.BigEndian.PutUint16(response[1:3], errorCode)
+	binary.BigEndian.PutUint32(response[3:7], payloadLength)
+	if payload != nil {
+		copy(response[7:], payload)
+	}
+
+	// The client uses a newline character to identify the end of the message 0x0A
+	response[len(response)-1] = MessageEndChar
+
+	return response, nil
+}

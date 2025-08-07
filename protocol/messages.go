@@ -1,5 +1,7 @@
 package protocol
 
+const MessageEndChar = 0x0A
+
 type MessageType int
 
 const (

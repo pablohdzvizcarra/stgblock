@@ -144,3 +144,32 @@ func TestCreateClientResponseOk(t *testing.T) {
 		assert.Nil(t, err)
 	}
 }
+
+func TestEncodeMessage(t *testing.T) {
+	tests := map[string]struct {
+		input  protocol.Response
+		output []byte
+		fails  bool
+	}{
+		"encode a response with status ok": {
+			input: protocol.Response{
+				Status:        protocol.StatusOk,
+				Error:         protocol.NoError,
+				PayloadLength: 0x00,
+				Payload:       nil,
+			},
+			output: []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0A},
+			fails:  false,
+		},
+	}
+
+	for _, test := range tests {
+		response, err := protocol.EncodeMessage(test.input)
+		if test.fails {
+			assert.NotNil(t, err)
+		} else {
+			assert.Nil(t, err)
+			assert.Equal(t, test.output, response)
+		}
+	}
+}
