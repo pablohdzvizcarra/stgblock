@@ -5,24 +5,6 @@ import (
 	"fmt"
 )
 
-type MessageType int
-
-const (
-	MessageRead  MessageType = 1
-	MessageWrite MessageType = 2
-)
-
-// Message the server receives an array of bytes from the client, which is serialize into a Message struct.
-// The array of bytes have the following format:
-// [messageType(1 byte)][filenameLength(1 byte)][filename][size(4 bytes)][content]
-type Message struct {
-	MessageType    MessageType
-	FilenameLength int
-	Filename       string
-	Size           uint32
-	RawData        []byte
-}
-
 // DecodeMessage interprets the raw data received from the server and returns a Message struct.
 // TODO: Modify this method to handle READ messages.
 func DecodeMessage(rawData []byte) (Message, error) {
