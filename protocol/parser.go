@@ -24,6 +24,7 @@ type Message struct {
 }
 
 // DecodeMessage interprets the raw data received from the server and returns a Message struct.
+// TODO: Modify this method to handle READ messages.
 func DecodeMessage(rawData []byte) (Message, error) {
 	if len(rawData) < 6 {
 		return Message{}, fmt.Errorf("the message have an invalid length")

@@ -12,9 +12,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/pablohdzvizcarra/storage-software-cookbook/handler"
-	"github.com/pablohdzvizcarra/storage-software-cookbook/protocol"
-	"github.com/pablohdzvizcarra/storage-software-cookbook/storage"
+	"github.com/pablohdzvizcarra/storage-software-cookbook/processor"
 )
 
 const ApplicationPort = ":8001"
@@ -70,6 +68,7 @@ func handleClientConnection(conn net.Conn) {
 	slog.Info("Client connected", "address", conn.RemoteAddr())
 	reader := bufio.NewReader(conn)
 
+	mp := &processor.DefaultMessageProcessor{}
 	for {
 		message, err := reader.ReadBytes('\n')
 		if err != nil {
@@ -78,26 +77,14 @@ func handleClientConnection(conn net.Conn) {
 		}
 
 		slog.Info("Receiving data from the client", "bytes", len(message))
-		slog.Info("Serializing the raw data from the client into a message format")
-		msg, err := protocol.DecodeMessage(message)
+
+		response, err := mp.Process(message)
 		if err != nil {
-			slog.Error("Error parsing the message", "error", err)
-			continue
+			slog.Error("Error processing message", "error", err)
+			// Send an error response back to the client
 		}
 
-		handler.HandleMessage(msg)
-
-		slog.Info("Message serialized successfully", "message", msg)
-
-		// Send the serialized message to the code that saves the file
-		err = storage.WriteFile(msg.Filename, msg.RawData)
-
-		if err != nil {
-			slog.Error("Error writing the file", "filename", msg.Filename, "error", err)
-		}
-
-		slog.Info("File written successfully", "filename", msg.Filename)
-
-		// Send a response back to the client
+		slog.Info("Sending response to the client", "bytes", len(response))
+		conn.Write(response)
 	}
 }
