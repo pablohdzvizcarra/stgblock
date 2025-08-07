@@ -80,3 +80,12 @@ func DecodeMessage(rawData []byte) (Message, error) {
 		RawData:        messageContent,
 	}, nil
 }
+
+func CreateClientResponseOk() (Response, error) {
+	return Response{
+		Status:        StatusOk,
+		Error:         NoError,
+		PayloadLength: 0,
+		Payload:       nil,
+	}, nil
+}

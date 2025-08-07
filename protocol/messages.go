@@ -28,6 +28,7 @@ const (
 type ErrorCode uint16
 
 const (
+	NoError         ErrorCode = 0x0000
 	ErrorNotFound   ErrorCode = 0x0001
 	ErrorBadRequest ErrorCode = 0x0002
 )

@@ -1,8 +1,9 @@
-package protocol
+package protocol_test
 
 import (
 	"testing"
 
+	"github.com/pablohdzvizcarra/storage-software-cookbook/protocol"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -11,18 +12,18 @@ const MessageEndChar = 0x0A
 func TestDecodeMessage(t *testing.T) {
 	tests := map[string]struct {
 		input  []byte
-		output Message
+		output protocol.Message
 		fails  bool
 	}{
 		"receive a wrong message with no enough data": {
 			input:  []byte{0},
-			output: Message{},
+			output: protocol.Message{},
 			fails:  true,
 		},
 		"validate message type equals to Write on parse message": {
 			input: []byte{2, 0, 0, 0, 0, 0},
-			output: Message{
-				MessageType:    MessageWrite,
+			output: protocol.Message{
+				MessageType:    protocol.MessageWrite,
 				FilenameLength: 0,
 				Filename:       "",
 				Size:           0,
@@ -33,8 +34,8 @@ func TestDecodeMessage(t *testing.T) {
 		"validate message type equals to Read on parse message": {
 			fails: true,
 			input: []byte{1, 0, 0, 0, 0, 0, 0},
-			output: Message{
-				MessageType:    MessageRead,
+			output: protocol.Message{
+				MessageType:    protocol.MessageRead,
 				FilenameLength: 0,
 				Filename:       "",
 				Size:           0,
@@ -49,8 +50,8 @@ func TestDecodeMessage(t *testing.T) {
 				100, 97, 116, 97, 46, 116, 120, 116,
 				0, 0, 0, 0,
 			},
-			output: Message{
-				MessageType:    MessageWrite,
+			output: protocol.Message{
+				MessageType:    protocol.MessageWrite,
 				FilenameLength: 8,
 				Filename:       "data.txt",
 				Size:           0,
@@ -65,8 +66,8 @@ func TestDecodeMessage(t *testing.T) {
 				0, 0, 0, 6,
 				0x00, 0x00,
 			},
-			output: Message{
-				MessageType:    MessageWrite,
+			output: protocol.Message{
+				MessageType:    protocol.MessageWrite,
 				FilenameLength: 8,
 				Filename:       "data.txt",
 				Size:           6,
@@ -83,8 +84,8 @@ func TestDecodeMessage(t *testing.T) {
 				0, 0, 0, 6,
 				0x48, 0x65, 0x6C, 0x6C, 0x6F, 0x20, 0x57, 0x6F, 0x72, 0x6C, 0x64,
 			},
-			output: Message{
-				MessageType:    MessageWrite,
+			output: protocol.Message{
+				MessageType:    protocol.MessageWrite,
 				FilenameLength: 8,
 				Filename:       "data.txt",
 				Size:           6,
@@ -101,8 +102,8 @@ func TestDecodeMessage(t *testing.T) {
 				0x48, 0x65, 0x6C, 0x6C, 0x6F, 0x20, 0x57, 0x6F, 0x72, 0x6C, 0x64,
 				MessageEndChar,
 			},
-			output: Message{
-				MessageType:    MessageWrite,
+			output: protocol.Message{
+				MessageType:    protocol.MessageWrite,
 				FilenameLength: 8,
 				Filename:       "data.txt",
 				Size:           11,
@@ -112,7 +113,7 @@ func TestDecodeMessage(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		message, err := DecodeMessage(test.input)
+		message, err := protocol.DecodeMessage(test.input)
 		if test.fails {
 			assert.NotNil(t, err)
 		} else {
@@ -120,5 +121,26 @@ func TestDecodeMessage(t *testing.T) {
 		}
 
 		assert.Equal(t, test.output, message)
+	}
+}
+
+func TestCreateClientResponseOk(t *testing.T) {
+	tests := map[string]struct {
+		output protocol.Response
+	}{
+		"create a response with status ok": {
+			output: protocol.Response{
+				Status:        protocol.StatusOk,
+				Error:         0x00,
+				PayloadLength: 0x00,
+				Payload:       nil,
+			},
+		},
+	}
+
+	for _, test := range tests {
+		response, err := protocol.CreateClientResponseOk()
+		assert.Equal(t, test.output, response)
+		assert.Nil(t, err)
 	}
 }
