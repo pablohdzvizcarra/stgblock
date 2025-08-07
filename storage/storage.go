@@ -15,11 +15,9 @@ const (
 	// The fixed size for each storage block, is 256 kilobyte.
 	BlockSize = 256000
 	// Directory to share our block storage.
-	// FIXME: refactor code to use absolute paths
-	BlocksDir = "./blocks"
+	BlocksDir = "/Users/pablohernadez/Documents/GitHub/storage-software-cookbook/blocks"
 	// The file that acts as our file system index
-	// FIXME: refactor code to use absolute paths
-	MetadataFile = "metadata.json"
+	MetadataFile = "/Users/pablohernadez/Documents/GitHub/storage-software-cookbook/metadata.json"
 )
 
 var metadataMutex sync.Mutex
