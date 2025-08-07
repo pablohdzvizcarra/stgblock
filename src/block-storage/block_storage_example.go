@@ -6,7 +6,7 @@ package main
 
 import (
 	"bufio"
-	"fmt"
+	"log/slog"
 	"net"
 	"os"
 	"os/signal"
@@ -19,10 +19,10 @@ import (
 const ApplicationPort = ":8001"
 
 func main() {
-	fmt.Println("========== Starting Block Storage Application ==========")
+	slog.Info("========== Starting Block Storage Application ==========")
 	listener, err := StartApplication()
 	if err != nil {
-		fmt.Printf("Error occurred when attempts to create the server")
+		slog.Error("Error occurred when attempts to create the server")
 	}
 	defer listener.Close()
 
@@ -31,24 +31,24 @@ func main() {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
 	<-quit
-	fmt.Println("========== Finish Block Storage Application ==========")
+	slog.Info("========== Finish Block Storage Application ==========")
 }
 
 func StartApplication() (net.Listener, error) {
-	fmt.Printf("Starting TCP server ont port: %s\n", ApplicationPort)
+	slog.Info("Starting TCP server on", "port", ApplicationPort)
 	listener, err := net.Listen("tcp", ApplicationPort)
 	if err != nil {
-		fmt.Printf("Error while starting the TCP server: %v\n", err)
+		slog.Error("Error while starting the TCP server, ", "error", err)
 		return nil, err
 	}
 
 	go func() {
-		fmt.Printf("TCP server listening on port: %s\n", ApplicationPort)
+		slog.Info("TCP server listening", "port", ApplicationPort)
 		for {
 			// Wait for a connection
 			conn, err := listener.Accept()
 			if err != nil {
-				fmt.Printf("Error accepting client connection: %v\n", err)
+				slog.Error("Error accepting client connection, ", "error", err)
 				return
 			}
 
@@ -66,26 +66,26 @@ func StartApplication() (net.Listener, error) {
 // The '\n' can see as the character stuffing technique
 func handleClientConnection(conn net.Conn) {
 	defer conn.Close()
-	fmt.Printf("Client connected: %v\n", conn.RemoteAddr())
+	slog.Info("Client connected", "address", conn.RemoteAddr())
 	reader := bufio.NewReader(conn)
 
 	for {
 		message, err := reader.ReadBytes('\n')
 		if err != nil {
-			fmt.Printf("Error reading data from the client: %v\n", err)
+			slog.Error("Error reading data from the client", "error", err)
 			break
 		}
 
-		fmt.Printf("Receiving [%d] bytes from the client\n", len(message))
-		fmt.Println("Serializing the raw data from the client into a message format")
+		slog.Info("Receiving data from the client", "bytes", len(message))
+		slog.Info("Serializing the raw data from the client into a message format")
 		msg, err := protocol.DecodeMessage(message)
 		if err != nil {
-			fmt.Printf("An error occurred parsing the message\n")
+			slog.Error("Error parsing the message", "error", err)
 			continue
 		}
 
 		handler.HandleMessage(msg)
 
-		fmt.Println(msg)
+		slog.Info("Message serialized successfully", "message", msg)
 	}
 }

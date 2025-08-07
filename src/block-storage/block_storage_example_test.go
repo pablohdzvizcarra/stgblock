@@ -20,12 +20,13 @@ func startTestTCPServer() (net.Conn, error) {
 }
 
 func TestSendWriteMessage(t *testing.T) {
-	// Start the server
+	// =================== Start the main application server for testing ===================
 	listener, err := StartApplication()
 	if err != nil {
 		t.Fatalf("failed to start the application: %v", err)
 	}
 	defer listener.Close()
+	// =====================================================================================
 
 	// Allow the server a moment to start
 	time.Sleep(100 * time.Millisecond)
