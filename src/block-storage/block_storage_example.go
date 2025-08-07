@@ -14,6 +14,7 @@ import (
 
 	"github.com/pablohdzvizcarra/storage-software-cookbook/handler"
 	"github.com/pablohdzvizcarra/storage-software-cookbook/protocol"
+	"github.com/pablohdzvizcarra/storage-software-cookbook/storage"
 )
 
 const ApplicationPort = ":8001"
@@ -87,5 +88,16 @@ func handleClientConnection(conn net.Conn) {
 		handler.HandleMessage(msg)
 
 		slog.Info("Message serialized successfully", "message", msg)
+
+		// Send the serialized message to the code that saves the file
+		err = storage.WriteFile(msg.Filename, msg.RawData)
+
+		if err != nil {
+			slog.Error("Error writing the file", "filename", msg.Filename, "error", err)
+		}
+
+		slog.Info("File written successfully", "filename", msg.Filename)
+
+		// Send a response back to the client
 	}
 }
