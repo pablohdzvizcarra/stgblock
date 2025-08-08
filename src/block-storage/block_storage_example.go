@@ -72,6 +72,10 @@ func handleClientConnection(conn net.Conn) {
 	for {
 		message, err := reader.ReadBytes('\n')
 		if err != nil {
+			if err.Error() == "EOF" {
+				slog.Info("Client disconnected", "address", conn.RemoteAddr())
+				break
+			}
 			slog.Error("Error reading data from the client", "error", err)
 			break
 		}
@@ -85,6 +89,9 @@ func handleClientConnection(conn net.Conn) {
 		}
 
 		slog.Info("Sending response to the client", "bytes", len(response))
-		conn.Write(response)
+		_, err = conn.Write(response)
+		if err != nil {
+			slog.Error("Error writing response to the client", "error", err)
+		}
 	}
 }
