@@ -15,11 +15,29 @@ import (
 const (
 	// The fixed size for each storage block, is 256 kilobyte.
 	BlockSize = 256000
-	// Directory to share our block storage.
-	BlocksDir = "/Users/pablohernadez/Documents/GitHub/storage-software-cookbook/blocks"
-	// The file that acts as our file system index
-	MetadataFile = "/Users/pablohernadez/Documents/GitHub/storage-software-cookbook/metadata.json"
 )
+
+// Default locations relative to the repository root. Can be overridden via env.
+var (
+	BlocksDirDefault    = "blocks"
+	MetadataFileDefault = "metadata.json"
+)
+
+// resolvePaths determines the directories to use at runtime.
+func resolvePaths() (blocksDir string, metadataFile string) {
+	if v := os.Getenv("STG_BLOCKS_DIR"); v != "" {
+		blocksDir = v
+	} else {
+		blocksDir = BlocksDirDefault
+	}
+
+	if v := os.Getenv("STG_METADATA_FILE"); v != "" {
+		metadataFile = v
+	} else {
+		metadataFile = MetadataFileDefault
+	}
+	return
+}
 
 var metadataMutex sync.Mutex
 
@@ -30,7 +48,8 @@ type Metadata map[string][]string
 func WriteFile(filename string, data []byte) error {
 	slog.Info("Starting file write", "filename", filename)
 	slog.Info("Attempting to write files to disk", "bytes", len(data))
-	os.MkdirAll(BlocksDir, 0755)
+	blocksDir, _ := resolvePaths()
+	os.MkdirAll(blocksDir, 0755)
 
 	var blockIDs []string
 	var wg sync.WaitGroup
@@ -67,7 +86,7 @@ func WriteFile(filename string, data []byte) error {
 
 		// Generate an unique ID for each chunk
 		blockID := fmt.Sprintf("%s.bin", uuid.New().String())
-		blockPath := filepath.Join(BlocksDir, blockID)
+		blockPath := filepath.Join(blocksDir, blockID)
 		blockIDs = append(blockIDs, blockID)
 
 		wg.Add(1)
@@ -90,6 +109,7 @@ func WriteFile(filename string, data []byte) error {
 
 func ReadFile(filename string) ([]byte, error) {
 	slog.Info("Reading file", "filename", filename)
+	_, _ = resolvePaths()
 
 	// 1. load the metadata to find which blocks to read
 	meta, err := loadMetadata()
@@ -111,7 +131,8 @@ func ReadFile(filename string) ([]byte, error) {
 		wg.Add(1)
 		go func(index int, id string) {
 			defer wg.Done()
-			path := filepath.Join(BlocksDir, id)
+			blocksDir, _ := resolvePaths()
+			path := filepath.Join(blocksDir, id)
 			slog.Info("Reading block from disk", "path", path)
 			chunk, err := os.ReadFile(path)
 			if err != nil {
@@ -153,12 +174,14 @@ func saveMetadata(filename string, blockIDs []string) error {
 	}
 
 	slog.Info("Updated metadata for file", "file", filename)
-	return os.WriteFile(MetadataFile, jsonData, 0644)
+	_, metadataFile := resolvePaths()
+	return os.WriteFile(metadataFile, jsonData, 0644)
 }
 
 // loadMetadata loads the metadata
 func loadMetadata() (Metadata, error) {
-	jsonData, err := os.ReadFile(MetadataFile)
+	_, metadataFile := resolvePaths()
+	jsonData, err := os.ReadFile(metadataFile)
 	// create metadata file if it doesn't exist
 	if os.IsNotExist(err) {
 		slog.Info("Metadata file does not exist, creating a new one.")

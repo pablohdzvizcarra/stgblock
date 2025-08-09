@@ -17,7 +17,8 @@ func main() {
 	slog.Info("========== Starting Block Storage Application ==========")
 	listener, err := StartApplication()
 	if err != nil {
-		slog.Error("Error occurred when attempts to create the server")
+	slog.Error("Failed to start the TCP server", "error", err)
+	os.Exit(1)
 	}
 	defer listener.Close()
 
@@ -42,13 +43,13 @@ func StartApplication() (net.Listener, error) {
 		for {
 			// Wait for a connection
 			conn, err := listener.Accept()
-			// if errors.Is(err, net.ErrClosed) {
-			// 	slog.Warn("The client has disconnected", "client", conn.RemoteAddr())
-			// 	return
-			// }
-
 			if err != nil {
-				slog.Error("Error accepting client connection, ", "error", err)
+				// Server is shutting down
+				if ne, ok := err.(net.Error); ok && !ne.Timeout() {
+					slog.Info("Listener closed; stopping accept loop")
+					return
+				}
+				slog.Error("Error accepting client connection", "error", err)
 				return
 			}
 
