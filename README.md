@@ -1,2 +1,4 @@
-# storage-software-cookbook
-Code repository to store my code examples and notes while learning Storage Software Engineering concepts
+# STGBlock
+
+STGBlock is a block storage application written in Go.
+For the moment the application is in building phase.
