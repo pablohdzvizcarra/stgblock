@@ -1,7 +1,3 @@
-// This file contains a basic representation of how a block storage system works.
-// This program is a simplified example and contains the logic for two block storage operations:
-// 1. Writing data to a block.
-// 2. Reading data from a block.
 package main
 
 import (
@@ -46,6 +42,11 @@ func StartApplication() (net.Listener, error) {
 		for {
 			// Wait for a connection
 			conn, err := listener.Accept()
+			// if errors.Is(err, net.ErrClosed) {
+			// 	slog.Warn("The client has disconnected", "client", conn.RemoteAddr())
+			// 	return
+			// }
+
 			if err != nil {
 				slog.Error("Error accepting client connection, ", "error", err)
 				return

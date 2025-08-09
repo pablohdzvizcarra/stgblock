@@ -164,7 +164,7 @@ func TestEncodeMessage(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		response, err := protocol.EncodeMessage(test.input)
+		response, err := protocol.EncodeResponseMessage(test.input)
 		if test.fails {
 			assert.NotNil(t, err)
 		} else {

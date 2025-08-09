@@ -15,7 +15,9 @@ type MessageProcessor interface {
 // DefaultMessageProcessor is the default implementation of MessageProcessor
 type DefaultMessageProcessor struct{}
 
-// Process decodes the message, handles it, and send back the response
+// Process decodes the message, handles it, and send back the response.
+//
+// This Process for the moment only supports WRITE operations, working on the READ operations.
 func (d *DefaultMessageProcessor) Process(message []byte) ([]byte, error) {
 	slog.Info("Serializing the raw data from the client into a message format")
 	msg, err := protocol.DecodeMessage(message)
@@ -24,15 +26,27 @@ func (d *DefaultMessageProcessor) Process(message []byte) ([]byte, error) {
 		return nil, err
 	}
 
+	// Processing the client message, operations like WRITE & READ
 	slog.Info("Handling the message", "messageType", msg.MessageType, "filename", msg.Filename)
 	err = handler.HandleMessage(msg)
 
 	if err != nil {
 		slog.Error("Error while handling the message", "error", err)
+		return nil, err
 	}
 
 	slog.Info("Creating a response message for the client")
-	// Send a response back to the client
+	response, err := protocol.CreateClientResponseOk()
+	if err != nil {
+		slog.Error("Error creating response", "error", err)
+		return nil, err
+	}
 
-	return nil, nil
+	rawResponse, err := protocol.EncodeResponseMessage(response)
+	if err != nil {
+		slog.Error("Error encoding response", "error", err)
+		return nil, err
+	}
+
+	return rawResponse, nil
 }

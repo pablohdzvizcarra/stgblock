@@ -90,7 +90,7 @@ func CreateClientResponseOk() (Response, error) {
 	}, nil
 }
 
-func EncodeMessage(msg Response) ([]byte, error) {
+func EncodeResponseMessage(msg Response) ([]byte, error) {
 	// Read the status (byte 0)
 	status := byte(msg.Status)
 
