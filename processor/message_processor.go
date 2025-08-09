@@ -34,7 +34,7 @@ func (d *DefaultMessageProcessor) Process(message []byte) ([]byte, error) {
 	}
 
 	slog.Info("Creating a response message for the client")
-	response, err := protocol.CreateClientResponseOk()
+	response, err := protocol.CreateClientResponse(msg)
 	if err != nil {
 		slog.Error("Error creating response", "error", err)
 		return nil, err

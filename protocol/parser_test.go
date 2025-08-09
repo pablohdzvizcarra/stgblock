@@ -174,24 +174,43 @@ func TestDecodeMessage(t *testing.T) {
 	}
 }
 
-func TestCreateClientResponseOk(t *testing.T) {
-	tests := map[string]struct {
-		output protocol.Response
+func TestCreateClientResponse(t *testing.T) {
+	type args struct {
+		message protocol.Message
+	}
+
+	tests := []struct {
+		name  string
+		args  args
+		want  protocol.Response
+		fails bool
 	}{
-		"create a response with status ok": {
-			output: protocol.Response{
+		{
+			"create write response message",
+			args{
+				message: protocol.Message{},
+			},
+			protocol.Response{
 				Status:        protocol.StatusOk,
 				Error:         0x00,
 				PayloadLength: 0x00,
 				Payload:       nil,
 			},
+			false,
 		},
 	}
 
 	for _, test := range tests {
-		response, err := protocol.CreateClientResponseOk()
-		assert.Equal(t, test.output, response)
-		assert.Nil(t, err)
+		t.Run(test.name, func(t *testing.T) {
+			response, err := protocol.CreateClientResponse(test.args.message)
+
+			if test.fails {
+				assert.NotNil(t, err)
+			} else {
+				assert.Nil(t, err)
+			}
+			assert.Equal(t, test.want, response)
+		})
 	}
 }
 

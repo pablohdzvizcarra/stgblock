@@ -138,7 +138,7 @@ func decodeWriteMessage(rawData []byte) (Message, error) {
 	}, nil
 }
 
-func CreateClientResponseOk() (Response, error) {
+func CreateClientResponse(message Message) (Response, error) {
 	return Response{
 		Status:        StatusOk,
 		Error:         NoError,

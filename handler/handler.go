@@ -10,6 +10,7 @@ import (
 )
 
 // HandleMessage interprets the Message and calls the appropriate function to handle it.
+//
 // This functions assumes that the Message is well-formed and does not perform any validation.
 // It is the responsibility of the caller to ensure that the Message is valid.
 func HandleMessage(msg protocol.Message) ([]byte, error) {
