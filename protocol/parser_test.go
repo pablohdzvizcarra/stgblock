@@ -110,17 +110,51 @@ func TestDecodeMessage(t *testing.T) {
 				RawData:        []byte{0x48, 0x65, 0x6C, 0x6C, 0x6F, 0x20, 0x57, 0x6F, 0x72, 0x6C, 0x64},
 			},
 		},
+		"error when parse read message with not valid filename length": {
+			fails: true,
+			input: []byte{
+				0x01,             // messageType
+				0x03,             // filenameLength
+				0x64, 0x61, 0x74, // filename
+				MessageEndChar, // Any message needs to have an end character
+			},
+			output: protocol.Message{
+				MessageType:    protocol.MessageRead,
+				FilenameLength: 0x00,
+				Filename:       "",
+				RawData:        nil,
+				Size:           0x00,
+			},
+		},
+		"error if filename does not match with the filenameLength": {
+			fails: true,
+			input: []byte{
+				0x01,                               // messageType
+				0x08,                               // filenameLength
+				0x64, 0x61, 0x74, 0x61, 0x2E, 0x74, // filename
+				MessageEndChar, // Any message needs to have an end character
+			},
+			output: protocol.Message{
+				MessageType:    protocol.MessageRead,
+				FilenameLength: 0x08,
+				Filename:       "",
+				RawData:        nil,
+				Size:           0x00,
+			},
+		},
 	}
 
-	for _, test := range tests {
-		message, err := protocol.DecodeMessage(test.input)
-		if test.fails {
-			assert.NotNil(t, err)
-		} else {
-			assert.Nil(t, err)
-		}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			message, err := protocol.DecodeMessage(test.input)
+			if test.fails {
+				assert.NotNil(t, err)
+			} else {
+				assert.Nil(t, err)
+			}
 
-		assert.Equal(t, test.output, message)
+			assert.Equal(t, test.output, message)
+		})
 	}
 }
 

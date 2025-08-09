@@ -3,27 +3,69 @@ package protocol
 import (
 	"encoding/binary"
 	"fmt"
+	"log/slog"
 )
 
 // DecodeMessage interprets the raw data received from the server and returns a Message struct.
-// TODO: Modify this method to handle READ messages.
 func DecodeMessage(rawData []byte) (Message, error) {
 	if len(rawData) < 6 {
 		return Message{}, fmt.Errorf("the message have an invalid length")
 	}
 
 	// Read the message type from the raw data (1 length)
-	var offset = 0
-	var messageType MessageType
-	messageTypeCode := int(rawData[offset])
+	messageTypeCode := int(rawData[0])
 	switch messageTypeCode {
 	case 1:
-		messageType = MessageRead
+		return decodeReadMessage(rawData)
 	case 2:
-		messageType = MessageWrite
+		return decodeWriteMessage(rawData)
+	default:
+		return Message{}, fmt.Errorf("the message type is not supported")
+	}
+}
+
+func decodeReadMessage(rawData []byte) (Message, error) {
+	slog.Info("Decoding a Read message from the client request")
+	var offset = 1
+
+	// Read the filename length from the rawData, length=1
+	filenameLength := int(rawData[offset])
+	offset += 1
+
+	if filenameLength < 8 {
+		return Message{
+			MessageType: MessageRead,
+		}, fmt.Errorf("invalid filenameLength, filename length needs to be > 8 bytes")
 	}
 
-	offset += 1
+	// Ensure there enough bytes for the filename
+	if offset+filenameLength > len(rawData) {
+		return Message{
+			MessageType:    MessageRead,
+			FilenameLength: filenameLength,
+			Filename:       "",
+		}, fmt.Errorf("the rawData does not contain enough bytes for the filename")
+	}
+	// Read the filename from the rawData, length=filenameLength
+	filename := string(rawData[offset : offset+filenameLength])
+	offset += filenameLength
+
+	if len(filename) != filenameLength {
+		slog.Warn("The filename length does not match the expected length", "expected", filenameLength, "actual", len(filename))
+		return Message{
+			MessageType:    MessageRead,
+			FilenameLength: filenameLength,
+			Filename:       "",
+		}, fmt.Errorf("the filename length does not match the expected length")
+	}
+
+	// read the filename length
+	return Message{}, nil
+}
+
+func decodeWriteMessage(rawData []byte) (Message, error) {
+	// here the offset start in 1 because we read 1 byte in DecodeMessage function
+	var offset = 1
 
 	// Read the filename length from the rawData, length 1
 	filenameLength := int(rawData[offset])
@@ -31,7 +73,7 @@ func DecodeMessage(rawData []byte) (Message, error) {
 
 	if filenameLength < 1 {
 		return Message{
-			MessageType: messageType,
+			MessageType: MessageWrite,
 		}, fmt.Errorf("the filename length could not be less than 1")
 	}
 
@@ -40,7 +82,7 @@ func DecodeMessage(rawData []byte) (Message, error) {
 	offset += len(filename)
 	if filename == "" {
 		return Message{
-			MessageType:    messageType,
+			MessageType:    MessageWrite,
 			FilenameLength: filenameLength,
 		}, fmt.Errorf("the filename cannot be empty")
 	}
@@ -52,7 +94,7 @@ func DecodeMessage(rawData []byte) (Message, error) {
 
 	if fileSize < 1 {
 		return Message{
-			MessageType:    messageType,
+			MessageType:    MessageWrite,
 			FilenameLength: filenameLength,
 			Filename:       filename,
 			Size:           fileSize,
@@ -65,7 +107,7 @@ func DecodeMessage(rawData []byte) (Message, error) {
 	// With this validation we are avoiding byte overflow vulnerability
 	if uint32(len(messageContent)) != fileSize {
 		return Message{
-			MessageType:    messageType,
+			MessageType:    MessageWrite,
 			FilenameLength: filenameLength,
 			Filename:       filename,
 			Size:           fileSize,
@@ -73,7 +115,7 @@ func DecodeMessage(rawData []byte) (Message, error) {
 	}
 
 	return Message{
-		MessageType:    messageType,
+		MessageType:    MessageWrite,
 		FilenameLength: int(filenameLength),
 		Filename:       filename,
 		Size:           fileSize,

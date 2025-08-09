@@ -19,8 +19,8 @@ const (
 
 // Default locations relative to the repository root. Can be overridden via env.
 var (
-	BlocksDirDefault    = "blocks"
-	MetadataFileDefault = "metadata.json"
+	BlocksDirDefault    = "/Users/pablohernadez/Documents/GitHub/stgblock/blocks"
+	MetadataFileDefault = "/Users/pablohernadez/Documents/GitHub/stgblock/metadata.json"
 )
 
 // resolvePaths determines the directories to use at runtime.
