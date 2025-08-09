@@ -142,6 +142,22 @@ func TestDecodeMessage(t *testing.T) {
 				Size:           0x00,
 			},
 		},
+		"parse read message correct": {
+			fails: false,
+			input: []byte{
+				0x01,                                           // messageType
+				0x08,                                           // filenameLength
+				0x64, 0x61, 0x74, 0x61, 0x2E, 0x74, 0x78, 0x74, // filename
+				MessageEndChar, // Any message needs to have an end character
+			},
+			output: protocol.Message{
+				MessageType:    protocol.MessageRead,
+				FilenameLength: 0x08,
+				Filename:       "data.txt",
+				RawData:        nil,
+				Size:           0x00,
+			},
+		},
 	}
 
 	for name, test := range tests {
