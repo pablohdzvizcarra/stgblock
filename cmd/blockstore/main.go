@@ -1,24 +1,20 @@
 package main
 
 import (
-	"bufio"
 	"log/slog"
-	"net"
 	"os"
 	"os/signal"
 	"syscall"
 
-	"github.com/pablohdzvizcarra/storage-software-cookbook/processor"
+	"github.com/pablohdzvizcarra/storage-software-cookbook/internal/server"
 )
-
-const ApplicationPort = ":8001"
 
 func main() {
 	slog.Info("========== Starting Block Storage Application ==========")
-	listener, err := StartApplication()
+	listener, err := server.StartApplication()
 	if err != nil {
-	slog.Error("Failed to start the TCP server", "error", err)
-	os.Exit(1)
+		slog.Error("Failed to start the TCP server", "error", err)
+		os.Exit(1)
 	}
 	defer listener.Close()
 
@@ -28,72 +24,4 @@ func main() {
 
 	<-quit
 	slog.Info("========== Finish Block Storage Application ==========")
-}
-
-func StartApplication() (net.Listener, error) {
-	slog.Info("Starting TCP server on", "port", ApplicationPort)
-	listener, err := net.Listen("tcp", ApplicationPort)
-	if err != nil {
-		slog.Error("Error while starting the TCP server, ", "error", err)
-		return nil, err
-	}
-
-	go func() {
-		slog.Info("TCP server listening", "port", ApplicationPort)
-		for {
-			// Wait for a connection
-			conn, err := listener.Accept()
-			if err != nil {
-				// Server is shutting down
-				if ne, ok := err.(net.Error); ok && !ne.Timeout() {
-					slog.Info("Listener closed; stopping accept loop")
-					return
-				}
-				slog.Error("Error accepting client connection", "error", err)
-				return
-			}
-
-			go handleClientConnection(conn)
-		}
-	}()
-
-	return listener, nil
-}
-
-// handleClientConnection manage a client connection.
-//
-// Clients needs to send a '\n' character to the server terminates of read the bytes and interprets
-// tha bytes as a message.
-// The '\n' can see as the character stuffing technique
-func handleClientConnection(conn net.Conn) {
-	defer conn.Close()
-	slog.Info("Client connected", "address", conn.RemoteAddr())
-	reader := bufio.NewReader(conn)
-
-	mp := &processor.DefaultMessageProcessor{}
-	for {
-		message, err := reader.ReadBytes('\n')
-		if err != nil {
-			if err.Error() == "EOF" {
-				slog.Info("Client disconnected", "address", conn.RemoteAddr())
-				break
-			}
-			slog.Error("Error reading data from the client", "error", err)
-			break
-		}
-
-		slog.Info("Receiving data from the client", "bytes", len(message))
-
-		response, err := mp.Process(message)
-		if err != nil {
-			slog.Error("Error processing message", "error", err)
-			// Send an error response back to the client
-		}
-
-		slog.Info("Sending response to the client", "bytes", len(response))
-		_, err = conn.Write(response)
-		if err != nil {
-			slog.Error("Error writing response to the client", "error", err)
-		}
-	}
 }

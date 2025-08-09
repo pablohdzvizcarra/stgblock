@@ -7,6 +7,8 @@ import (
 	"net"
 	"testing"
 	"time"
+
+	"github.com/pablohdzvizcarra/storage-software-cookbook/internal/server"
 )
 
 func startTestTCPServer() (net.Conn, error) {
@@ -21,7 +23,7 @@ func startTestTCPServer() (net.Conn, error) {
 
 func TestSendWriteMessage(t *testing.T) {
 	// =================== Start the main application server for testing ===================
-	listener, err := StartApplication()
+	listener, err := server.StartApplication()
 	if err != nil {
 		t.Fatalf("failed to start the application: %v", err)
 	}
