@@ -67,6 +67,7 @@ func decodeReadMessage(rawData []byte) (Message, error) {
 		}, fmt.Errorf("incomplete message: invalid end-of-message byte")
 	}
 
+	slog.Info("Read message decoded successfully")
 	// read the filename length
 	return Message{
 		MessageType:    MessageRead,
