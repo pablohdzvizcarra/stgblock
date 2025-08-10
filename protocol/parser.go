@@ -138,6 +138,12 @@ func decodeWriteMessage(rawData []byte) (Message, error) {
 	}, nil
 }
 
+// CreateClientResponse creates the client message response.
+// This method takes the Message created by the handler with the operation result.
+//
+// Parameters:
+//   - msg: the message received from the storage component.
+//   - error: error value indicating if there was any issue during response creation.
 func CreateClientResponse(msg Message) (Response, error) {
 	if msg.MessageType == MessageRead {
 		return Response{
@@ -147,12 +153,17 @@ func CreateClientResponse(msg Message) (Response, error) {
 			Payload:       msg.RawData,
 		}, nil
 	}
-	return Response{
-		Status:        StatusOk,
-		Error:         NoError,
-		PayloadLength: 0,
-		Payload:       nil,
-	}, nil
+
+	if msg.MessageType == MessageWrite {
+		return Response{
+			Status:        StatusOk,
+			Error:         NoError,
+			PayloadLength: 0,
+			Payload:       nil,
+		}, nil
+	}
+
+	return Response{}, nil
 }
 
 func EncodeResponseMessage(msg Response) ([]byte, error) {
