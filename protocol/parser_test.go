@@ -234,30 +234,52 @@ func TestCreateClientResponse(t *testing.T) {
 }
 
 func TestEncodeMessage(t *testing.T) {
-	tests := map[string]struct {
-		input  protocol.Response
-		output []byte
-		fails  bool
+	tests := []struct {
+		name    string
+		arg     protocol.Response
+		want    []byte
+		wantErr bool
 	}{
-		"encode a response with status ok": {
-			input: protocol.Response{
+		{
+			name: "encode a binary response with status ok",
+			arg: protocol.Response{
 				Status:        protocol.StatusOk,
 				Error:         protocol.NoError,
 				PayloadLength: 0x00,
 				Payload:       nil,
 			},
-			output: []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0A},
-			fails:  false,
+			want:    []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0A},
+			wantErr: false,
+		},
+		{
+			name: "encode a binary read response with status ok",
+			arg: protocol.Response{
+				Status:        protocol.StatusOk,
+				Error:         protocol.NoError,
+				PayloadLength: 0x0B,
+				Payload:       []byte{0x48, 0x65, 0x6C, 0x6C, 0x6F, 0x20, 0x57, 0x6F, 0x72, 0x6C, 0x64},
+			},
+			want: []byte{
+				0x00,       // statusCode
+				0x00, 0x00, // errorCode
+				0x00, 0x00, 0x00, 0x0B, // payloadLength
+				0x48, 0x65, 0x6C, 0x6C, 0x6F, 0x20, 0x57, 0x6F, 0x72, 0x6C, 0x64, // payload
+				MessageEndChar,
+			},
+			wantErr: false,
 		},
 	}
 
-	for _, test := range tests {
-		response, err := protocol.EncodeResponseMessage(test.input)
-		if test.fails {
-			assert.NotNil(t, err)
-		} else {
-			assert.Nil(t, err)
-			assert.Equal(t, test.output, response)
-		}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			response, err := protocol.EncodeResponseMessage(tt.arg)
+			if tt.wantErr {
+				assert.NotNil(t, err)
+			} else {
+				assert.Nil(t, err)
+				assert.Equal(t, tt.want, response)
+			}
+
+		})
 	}
 }
