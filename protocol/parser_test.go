@@ -180,10 +180,10 @@ func TestCreateClientResponse(t *testing.T) {
 	}
 
 	tests := []struct {
-		name  string
-		args  args
-		want  protocol.Response
-		fails bool
+		name    string
+		args    args
+		want    protocol.Response
+		wantErr bool
 	}{
 		{
 			"create write response message",
@@ -198,13 +198,32 @@ func TestCreateClientResponse(t *testing.T) {
 			},
 			false,
 		},
+		{
+			name: "create READ response message",
+			args: args{
+				message: protocol.Message{
+					MessageType:    protocol.MessageRead,
+					FilenameLength: 8,
+					Filename:       "data.txt",
+					RawData:        []byte{0x48, 0x65, 0x6C, 0x6C, 0x6F, 0x20, 0x57, 0x6F, 0x72, 0x6C, 0x64},
+					Size:           11,
+				},
+			},
+			want: protocol.Response{
+				Status:        protocol.StatusOk,
+				Error:         protocol.NoError,
+				PayloadLength: 11,
+				Payload:       []byte{0x48, 0x65, 0x6C, 0x6C, 0x6F, 0x20, 0x57, 0x6F, 0x72, 0x6C, 0x64},
+			},
+			wantErr: false,
+		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			response, err := protocol.CreateClientResponse(test.args.message)
 
-			if test.fails {
+			if test.wantErr {
 				assert.NotNil(t, err)
 			} else {
 				assert.Nil(t, err)

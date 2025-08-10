@@ -138,7 +138,15 @@ func decodeWriteMessage(rawData []byte) (Message, error) {
 	}, nil
 }
 
-func CreateClientResponse(message Message) (Response, error) {
+func CreateClientResponse(msg Message) (Response, error) {
+	if msg.MessageType == MessageRead {
+		return Response{
+			Status:        StatusOk,
+			Error:         NoError,
+			PayloadLength: msg.Size,
+			Payload:       msg.RawData,
+		}, nil
+	}
 	return Response{
 		Status:        StatusOk,
 		Error:         NoError,
