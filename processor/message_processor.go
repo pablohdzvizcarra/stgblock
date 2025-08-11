@@ -26,20 +26,26 @@ func (d *DefaultMessageProcessor) Process(message []byte) ([]byte, error) {
 
 	// Processing the client message, operations like WRITE & READ
 	slog.Info("Handling the message", "messageType", msg.MessageType, "filename", msg.Filename)
-	_, err = handler.HandleMessage(msg)
+	respBytes, err := handler.HandleMessage(msg)
 
 	if err != nil {
 		slog.Error("Error while handling the message", "error", err)
 		return nil, err
 	}
 
-	slog.Info("Creating a response message for the client")
+	if respBytes != nil {
+		msg.RawData = respBytes
+		msg.Size = uint32(len(respBytes))
+	}
+
+	slog.Info("Creating a response message for the client", "type", msg.MessageType, "payloadLength", msg.Size)
 	response, err := protocol.CreateClientResponse(msg)
 	if err != nil {
 		slog.Error("Error creating response", "error", err)
 		return nil, err
 	}
 
+	slog.Info("Encoding the client message response into protocol format")
 	rawResponse, err := protocol.EncodeResponseMessage(response)
 	if err != nil {
 		slog.Error("Error encoding response", "error", err)

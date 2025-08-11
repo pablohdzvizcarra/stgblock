@@ -68,7 +68,7 @@ func handleClientConnection(conn net.Conn) {
 			// In a future iteration, send an error response back to the client
 		}
 
-		slog.Info("Sending response to the client", "bytes", len(response))
+		slog.Info("Sending response to the client", "byteSize", len(response))
 		if _, err = conn.Write(response); err != nil {
 			slog.Error("Error writing response to the client", "error", err)
 		}

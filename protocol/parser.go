@@ -172,7 +172,7 @@ func CreateClientResponse(msg Message) (Response, error) {
 //   - msg: the response message
 //   - error: if an error happens when creating the binary message response.
 func EncodeResponseMessage(msg Response) ([]byte, error) {
-	slog.Info("Encoding a response message into bytes", "status", msg.Status)
+	slog.Info("Encoding a response message into bytes", "status", msg.Status, "payloadLength", msg.PayloadLength)
 	// Read the status (byte 0)
 	status := byte(msg.Status)
 

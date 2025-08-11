@@ -20,6 +20,7 @@ func HandleMessage(msg protocol.Message) ([]byte, error) {
 		if err != nil {
 			return nil, fmt.Errorf("error writing file %s: %v", msg.Filename, err)
 		}
+		return nil, nil
 	case protocol.MessageRead:
 		data, err := storage.ReadFile(msg.Filename)
 		if err != nil {
