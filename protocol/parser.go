@@ -6,6 +6,8 @@ import (
 	"log/slog"
 )
 
+const MIN_FILENAME_LENGTH = 8
+
 // DecodeMessage interprets the raw data received from the server and returns a Message struct.
 func DecodeMessage(rawData []byte) (Message, error) {
 	if len(rawData) < 6 {
@@ -19,9 +21,28 @@ func DecodeMessage(rawData []byte) (Message, error) {
 		return decodeReadMessage(rawData)
 	case 2:
 		return decodeWriteMessage(rawData)
+	case 4:
+		return decodeDeleteMessage(rawData)
 	default:
 		return Message{}, fmt.Errorf("the message type is not supported")
 	}
+}
+
+func decodeDeleteMessage(rawData []byte) (Message, error) {
+	slog.Info("Decoding a Delete message from the client request", "bytesLength=", len(rawData))
+	var offset = 1
+
+	// read the filename length
+	filenameLength := int(rawData[offset])
+	offset += 1
+
+	if filenameLength < MIN_FILENAME_LENGTH {
+		return Message{
+			MessageType: MessageDelete,
+		}, fmt.Errorf("invalid filenameLength, filename length needs to be > 8 bytes")
+	}
+
+	return Message{}, nil
 }
 
 func decodeReadMessage(rawData []byte) (Message, error) {
