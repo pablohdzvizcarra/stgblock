@@ -31,5 +31,4 @@ func HandleMessage(msg protocol.Message) ([]byte, error) {
 	default:
 		return nil, fmt.Errorf("unknown message type: %v", msg.MessageType)
 	}
-	return nil, nil
 }
