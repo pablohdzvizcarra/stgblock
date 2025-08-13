@@ -42,6 +42,15 @@ func decodeDeleteMessage(rawData []byte) (Message, error) {
 		}, fmt.Errorf("invalid filenameLength, filename length needs to be > 8 bytes")
 	}
 
+	// -2 is necessary because we need to subtract
+	// 1 for the messageType
+	// 1 for the endCharacter
+	if offset+filenameLength >= len(rawData)-2 {
+		return Message{
+			MessageType: MessageDelete,
+		}, fmt.Errorf("invalid filename, the filename does not match with the length")
+	}
+
 	return Message{}, nil
 }
 
