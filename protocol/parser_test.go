@@ -175,7 +175,7 @@ func TestDecodeMessage(t *testing.T) {
 			},
 		},
 		"return error with not valid filename length in Delete message": {
-			fails: false,
+			fails: true,
 			input: []byte{
 				0x04,                               // messageType
 				0x06,                               // filenameLength
@@ -187,7 +187,7 @@ func TestDecodeMessage(t *testing.T) {
 			},
 		},
 		"return error with not valid filename in Delete message": {
-			fails: false,
+			fails: true,
 			input: []byte{
 				0x04,                                                 // messageType
 				0x08,                                                 // filenameLength
@@ -195,7 +195,9 @@ func TestDecodeMessage(t *testing.T) {
 				MessageEndChar, // Any message needs to have an end character
 			},
 			output: protocol.Message{
-				MessageType: protocol.MessageDelete,
+				MessageType:    protocol.MessageDelete,
+				FilenameLength: 0x08,
+				Filename:       "dataa.tx",
 			},
 		},
 	}

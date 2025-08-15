@@ -30,6 +30,19 @@ func TestProcess(t *testing.T) {
 				protocol.MessageEndChar},
 			wantErr: false,
 		},
+		{
+			name: "process a valid Delete message",
+			args: args{
+				message: []byte{0x04, 0x08, 0x64, 0x61, 0x74, 0x61, 0x2E, 0x74, 0x78, 0x74, protocol.MessageEndChar},
+			},
+			want: []byte{
+				0x00,       // status
+				0x00, 0x00, // errorCode
+				0x00, 0x00, 0x00, 0x04, // payloadLength
+				protocol.MessageEndChar,
+			},
+			wantErr: false,
+		},
 	}
 
 	for _, tt := range tests {

@@ -39,19 +39,37 @@ func decodeDeleteMessage(rawData []byte) (Message, error) {
 	if filenameLength < MIN_FILENAME_LENGTH {
 		return Message{
 			MessageType: MessageDelete,
-		}, fmt.Errorf("invalid filenameLength, filename length needs to be > 8 bytes")
+		}, fmt.Errorf("invalid filenameLength=%d, filename length needs to be > 8 bytes", filenameLength)
 	}
 
 	// -2 is necessary because we need to subtract
 	// 1 for the messageType
 	// 1 for the endCharacter
-	if offset+filenameLength >= len(rawData)-2 {
+	if offset+filenameLength > len(rawData)-1 {
 		return Message{
 			MessageType: MessageDelete,
-		}, fmt.Errorf("invalid filename, the filename does not match with the length")
+		}, fmt.Errorf("filename length (%d) exceeds available data (%d)", filenameLength, len(rawData)-offset-2)
 	}
 
-	return Message{}, nil
+	// extract the filename from the bytes
+	filename := rawData[offset : offset+filenameLength]
+	offset += filenameLength
+
+	// Validates the message have the end character
+	endChar := rawData[offset]
+	if endChar != MessageEndChar {
+		return Message{
+			MessageType:    MessageDelete,
+			FilenameLength: filenameLength,
+			Filename:       string(filename),
+		}, fmt.Errorf("the message does not contains the correct end character at the end of the message")
+	}
+
+	return Message{
+		MessageType:    MessageDelete,
+		FilenameLength: filenameLength,
+		Filename:       string(filename),
+	}, nil
 }
 
 func decodeReadMessage(rawData []byte) (Message, error) {
