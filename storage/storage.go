@@ -196,3 +196,48 @@ func loadMetadata() (Metadata, error) {
 	err = json.Unmarshal(jsonData, &meta)
 	return meta, err
 }
+
+func DeleteFile(filename string) ([]byte, error) {
+	slog.Info("starting delete operation for file", "file", filename)
+	var wg sync.WaitGroup
+	_, _ = resolvePaths()
+
+	// load the metadata to know the block address
+	metadataMutex.Lock()
+	meta, err := loadMetadata()
+	if err != nil {
+		metadataMutex.Unlock()
+		slog.Error("An error occurred when reading the metadata from disk", "error", err)
+		return nil, err
+	}
+
+	blocks, exists := meta[filename]
+
+	if !exists {
+		metadataMutex.Unlock()
+		slog.Info("The file to be deleted does not exists on disk", "file", filename)
+		return nil, fmt.Errorf("the file=%s does not exists on disk", filename)
+	}
+
+	metadataMutex.Unlock()
+
+	for _, blockID := range blocks {
+		wg.Add(1)
+		blocksDir, _ := resolvePaths()
+		blockPath := filepath.Join(blocksDir, blockID)
+
+		go func(path string) {
+			defer wg.Done()
+			slog.Info("deleting the block saved in path", "path", path)
+			err := os.Remove(path)
+			if err != nil {
+				slog.Error("An error occurred deleting the file", "file", path, "error", err)
+			}
+		}(blockPath)
+	}
+
+	wg.Wait()
+	slog.Info("All blocks were deleted for the file", "file", filename)
+
+	return nil, nil
+}
