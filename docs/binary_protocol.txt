@@ -32,6 +32,18 @@ Payload
 - if statusCode == 0x00, this is the "successful" data (e.g. the block's bytes on a READ)
 - if statusCode == 0x01, this is an ASCII or UTF-8 error message string.
 
+========================================================================================
+WRITE MESSAGES FROM CLIENT
+========================================================================================
+
+Format of a WRITE message request sent by the client:
+
+- [messageType 1 byte]
+- [filenameLength 1 byte]
+- [filename (filenameLength bytes)]
+- [size 4 bytes]
+- [rawData (size bytes)]
+- [endChar 1 byte]
 
 ========================================================================================
 READ MESSAGES FROM CLIENT

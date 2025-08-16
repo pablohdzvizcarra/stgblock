@@ -18,7 +18,27 @@ func TestProcess(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "process a valid Read message",
+			name: "processing a valid WRITE message",
+			args: args{
+				message: []byte{
+					0x02,                                           // message type
+					0x08,                                           // filename length
+					0x64, 0x61, 0x74, 0x61, 0x2E, 0x74, 0x78, 0x74, // filename
+					0x00, 0x00, 0x00, 0x0B, // size
+					0x48, 0x65, 0x6C, 0x6C, 0x6F, 0x20, 0x57, 0x6F, 0x72, 0x6C, 0x64, // content
+					protocol.MessageEndChar,
+				},
+			},
+			want: []byte{
+				0x00,       // status
+				0x00, 0x00, // error code
+				0x00, 0x00, 0x00, 0x00, // payload length
+				protocol.MessageEndChar, // end character
+			},
+			wantErr: false,
+		},
+		{
+			name: "process a valid READ message",
 			args: args{
 				message: []byte{0x01, 0x08, 0x64, 0x61, 0x74, 0x61, 0x2E, 0x74, 0x78, 0x74, protocol.MessageEndChar},
 			},
@@ -31,14 +51,14 @@ func TestProcess(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "process a valid Delete message",
+			name: "process a valid DELETE message",
 			args: args{
 				message: []byte{0x04, 0x08, 0x64, 0x61, 0x74, 0x61, 0x2E, 0x74, 0x78, 0x74, protocol.MessageEndChar},
 			},
 			want: []byte{
 				0x00,       // status
 				0x00, 0x00, // errorCode
-				0x00, 0x00, 0x00, 0x04, // payloadLength
+				0x00, 0x00, 0x00, 0x00, // payloadLength
 				protocol.MessageEndChar,
 			},
 			wantErr: false,
