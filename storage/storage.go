@@ -197,9 +197,9 @@ func loadMetadata() (Metadata, error) {
 	return meta, err
 }
 
-// DeleteFile deletes a file as blocks from the storage system.
+// DeleteFile deletes a file from the storage system by removing its blocks and updating metadata.
 //
-// This function
+// filename is the name of the file to delete
 func DeleteFile(filename string) ([]byte, error) {
 	slog.Info("starting delete operation for file", "file", filename)
 
@@ -211,7 +211,6 @@ func DeleteFile(filename string) ([]byte, error) {
 	}
 
 	var wg sync.WaitGroup
-	_, _ = resolvePaths()
 
 	// load the metadata to know the block address
 	metadataMutex.Lock()
@@ -234,15 +233,16 @@ func DeleteFile(filename string) ([]byte, error) {
 	err = updateMetadata(meta, filename)
 	if err != nil {
 		metadataMutex.Unlock()
-		slog.Info("The file to delete it does not exists on disk or an error happens", "file", filename)
+		slog.Info("The file to delete does not exists on disk or an error happens", "file", filename)
+		return nil, fmt.Errorf("failed to update metadata for file %s: %v", filename, err)
 	}
 	metadataMutex.Unlock()
 
 	errChan := make(chan error, len(blocksAddr))
 
+	blocksDir, _ := resolvePaths()
 	for _, blockID := range blocksAddr {
 		wg.Add(1)
-		blocksDir, _ := resolvePaths()
 		blockPath := filepath.Join(blocksDir, blockID)
 
 		go func(path string) {
