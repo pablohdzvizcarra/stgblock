@@ -199,6 +199,19 @@ func loadMetadata() (Metadata, error) {
 
 func DeleteFile(filename string) ([]byte, error) {
 	slog.Info("starting delete operation for file", "file", filename)
+
+	// Validates if the file exists before delete it
+	data, err := ReadFile(filename)
+	if err != nil {
+		return nil,
+			fmt.Errorf("an error occurred while validating if the file=%s exists on disk before delete it", filename)
+	}
+
+	if data == nil {
+		return nil,
+			fmt.Errorf("the file=%s does not exists on the storage", filename)
+	}
+
 	var wg sync.WaitGroup
 	_, _ = resolvePaths()
 
@@ -212,14 +225,17 @@ func DeleteFile(filename string) ([]byte, error) {
 	}
 
 	blocks, exists := meta[filename]
-
 	if !exists {
 		metadataMutex.Unlock()
 		slog.Info("The file to be deleted does not exists on disk", "file", filename)
 		return nil, fmt.Errorf("the file=%s does not exists on disk", filename)
 	}
 
+	// TODO: create logic to remove the block addresses from the metadata
+
 	metadataMutex.Unlock()
+
+	errChan := make(chan error, len(blocks))
 
 	for _, blockID := range blocks {
 		wg.Add(1)
@@ -232,12 +248,24 @@ func DeleteFile(filename string) ([]byte, error) {
 			err := os.Remove(path)
 			if err != nil {
 				slog.Error("An error occurred deleting the file", "file", path, "error", err)
+				errChan <- fmt.Errorf("failed to delete block %s: %v", path, err)
 			}
 		}(blockPath)
 	}
 
 	wg.Wait()
-	slog.Info("All blocks were deleted for the file", "file", filename)
+	close(errChan)
 
+	// collect errors from channel
+	var deleteErrors []error
+	for err := range errChan {
+		deleteErrors = append(deleteErrors, err)
+	}
+
+	if len(deleteErrors) > 0 {
+		return nil, fmt.Errorf("errors occurred during block deletion: %v", deleteErrors)
+	}
+
+	slog.Info("All blocks were deleted for file", "file", filename)
 	return nil, nil
 }
