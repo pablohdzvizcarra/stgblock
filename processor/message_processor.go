@@ -1,7 +1,9 @@
 package processor
 
 import (
+	"encoding/binary"
 	"log/slog"
+	"strings"
 
 	"github.com/pablohdzvizcarra/storage-software-cookbook/handler"
 	"github.com/pablohdzvizcarra/storage-software-cookbook/protocol"
@@ -30,7 +32,7 @@ func (d *DefaultMessageProcessor) Process(message []byte) ([]byte, error) {
 
 	if err != nil {
 		slog.Error("Error while handling the message", "error", err)
-		return nil, err
+		return processErrorResponse(err, msg)
 	}
 
 	if respBytes != nil {
@@ -53,4 +55,20 @@ func (d *DefaultMessageProcessor) Process(message []byte) ([]byte, error) {
 	}
 
 	return rawResponse, nil
+}
+
+func processErrorResponse(err error, msg protocol.Message) ([]byte, error) {
+	// validate if the error contains some string pattern
+	if strings.Contains(err.Error(), "file not found") {
+		errCodeBytes := make([]byte, 2)
+		binary.BigEndian.PutUint16(errCodeBytes, uint16(protocol.ErrorNotFound))
+		return []byte{
+			byte(protocol.StatusError),
+			errCodeBytes[0], errCodeBytes[1],
+			0x00, 0x00, 0x00, 0x00,
+			protocol.MessageEndChar,
+		}, nil
+	}
+
+	return nil, nil
 }

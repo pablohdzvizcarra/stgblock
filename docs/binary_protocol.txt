@@ -8,6 +8,7 @@ The client responses have the following format:
 - [errorCode (2 bytes)]
 - [payloadLength (4 bytes)]
 - [payload (payloadLength bytes)]
+- [endChar (1 byte)]
 
 Client response is composed for 7 header bytes and the payload.
 
@@ -31,12 +32,11 @@ Payload
 - if statusCode == 0x00, this is the "successful" data (e.g. the block's bytes on a READ)
 - if statusCode == 0x01, this is an ASCII or UTF-8 error message string.
 
-
 ========================================================================================
-READ MESSAGES FROM CLIENT
+WRITE MESSAGES FROM CLIENT
 ========================================================================================
 
-Format of the READ message request sent by a client:
+Format of a WRITE message request sent by the client:
 
 - [messageType 1 byte]
 - [filenameLength 1 byte]
@@ -46,10 +46,11 @@ Format of the READ message request sent by a client:
 - [endChar 1 byte]
 
 
--------------------
+------------------
 messageType
 - 0x01: Read
 - 0x02: Write
+- 0x04: Delete
 
 
 -------------------
@@ -74,6 +75,37 @@ endChar
 
 
 ========================================================================================
+READ MESSAGES FROM CLIENT
+========================================================================================
+
+Format of the READ message request sent by a client:
+
+- [messageType 1 byte]
+- [filenameLength 1 byte]
+- [filename (filenameLength bytes)]
+- [endChar 1 byte]
+
+
+-------------------
+messageType
+- 0x01: Read
+- 0x02: Write
+
+
+-------------------
+filenameLength
+- 1 byte representing the length of the filename in bytes.
+
+-------------------
+filename
+- (filenameLength bytes) the name of the file to read.
+
+-------------------
+endChar
+- 1 byte indicating the end of the message (0x0A - \n).
+
+
+========================================================================================
 DESIGN ISSUES
 ========================================================================================
 - Currently the protocol requires as end character the byte 0x0A (LF), if a client wants to send a message
@@ -81,3 +113,36 @@ DESIGN ISSUES
     waiting for the end character to process the message. The design about add the character as an end message is good,
     but the problem is if a custom client want so to connect to the server and was not designed with this in mind,
     it will not be able to communicate effectively, leading to potential data loss or corruption and cause false negatives.
+
+
+
+========================================================================================
+DELETE MESSAGE FROM CLIENT
+========================================================================================
+
+Format of the DELETE message request sent by a client:
+
+- [messageType 1 byte]
+- [filenameLength 1 byte]
+- [filename (filenameLength bytes)]
+- [endChar 1 byte]
+
+
+-------------------
+messageType
+- 0x01: Read
+- 0x02: Write
+- 0x04: Delete
+
+
+-------------------
+filenameLength
+- 1 byte representing the length of the filename in bytes.
+
+-------------------
+filename
+- (filenameLength bytes) the name of the file to delete.
+
+-------------------
+endChar
+- 1 byte indicating the end of the message (0x0A - \n).

@@ -118,7 +118,7 @@ func ReadFile(filename string) ([]byte, error) {
 	}
 	blockIDs, ok := meta[filename]
 	if !ok {
-		return nil, fmt.Errorf("file %s not found in metadata", filename)
+		return nil, fmt.Errorf("%s file not found in metadata", filename)
 	}
 
 	// create a slice to hold the data from each block
@@ -195,4 +195,94 @@ func loadMetadata() (Metadata, error) {
 	var meta Metadata
 	err = json.Unmarshal(jsonData, &meta)
 	return meta, err
+}
+
+// DeleteFile deletes a file as blocks from the storage system.
+//
+// This function
+func DeleteFile(filename string) ([]byte, error) {
+	slog.Info("starting delete operation for file", "file", filename)
+
+	// Validates if the file exists before delete it
+	_, err := ReadFile(filename)
+	if err != nil {
+		return nil,
+			fmt.Errorf("an error occurred while validating if the file=%s exists on disk before delete it, error=%v", filename, err)
+	}
+
+	var wg sync.WaitGroup
+	_, _ = resolvePaths()
+
+	// load the metadata to know the block address
+	metadataMutex.Lock()
+	meta, err := loadMetadata()
+	if err != nil {
+		metadataMutex.Unlock()
+		slog.Error("An error occurred when reading the metadata from disk", "error", err)
+		return nil, err
+	}
+
+	blocksAddr, exists := meta[filename]
+	if !exists {
+		metadataMutex.Unlock()
+		slog.Info("The file to be deleted does not exists on disk", "file", filename)
+		return nil, fmt.Errorf("the file=%s does not exists on disk", filename)
+	}
+
+	// remove the file from metadata
+	delete(meta, filename)
+	err = updateMetadata(meta, filename)
+	if err != nil {
+		metadataMutex.Unlock()
+		slog.Info("The file to delete it does not exists on disk or an error happens", "file", filename)
+	}
+	metadataMutex.Unlock()
+
+	errChan := make(chan error, len(blocksAddr))
+
+	for _, blockID := range blocksAddr {
+		wg.Add(1)
+		blocksDir, _ := resolvePaths()
+		blockPath := filepath.Join(blocksDir, blockID)
+
+		go func(path string) {
+			defer wg.Done()
+			slog.Info("deleting the block saved in path", "path", path)
+			err := os.Remove(path)
+			if err != nil {
+				slog.Error("An error occurred deleting the file", "file", path, "error", err)
+				errChan <- fmt.Errorf("failed to delete block %s: %v", path, err)
+			}
+		}(blockPath)
+	}
+
+	wg.Wait()
+	close(errChan)
+
+	// collect errors from channel
+	var deleteErrors []error
+	for err := range errChan {
+		deleteErrors = append(deleteErrors, err)
+	}
+
+	if len(deleteErrors) > 0 {
+		return nil, fmt.Errorf("errors occurred during block deletion: %v", deleteErrors)
+	}
+
+	slog.Info("All blocks were deleted for file", "file", filename)
+	return nil, nil
+}
+
+func updateMetadata(meta Metadata, elem string) error {
+	slog.Info("attempting to remove one element from metadata", "file", elem)
+
+	_, metadataFile := resolvePaths()
+	jsonData, err := json.MarshalIndent(meta, "", " ")
+	if err != nil {
+		slog.Error("An error occurred while parsing metadata to json for delete operation", "error", err)
+		return err
+	}
+
+	slog.Info("removing element from metadata", "element", elem)
+	return os.WriteFile(metadataFile, jsonData, 0644)
 }

@@ -132,3 +132,105 @@ func TestSendReadMessage(t *testing.T) {
 		})
 	}
 }
+
+func TestErrorNotFoundWhenDeleteFileAndNextRead(t *testing.T) {
+	// =================== Start the main application server for testing ===================
+	listener, err := server.StartApplication()
+	if err != nil {
+		t.Fatalf("failed to start the application: %v", err)
+	}
+	defer listener.Close()
+	// =====================================================================================
+
+	// Allow the server a moment to start
+	time.Sleep(100 * time.Millisecond)
+
+	// Create the client to send messages to the application
+	conn, err := startTestTCPServer()
+	if err != nil {
+		t.FailNow()
+	}
+	defer conn.Close()
+
+	tests := []struct {
+		name    string
+		input   []byte
+		want    []byte
+		wantErr bool
+	}{
+		{
+			name: "client can create a file",
+			input: []byte{
+				0x02,
+				0x08,
+				0x64, 0x61, 0x74, 0x61, 0x2E, 0x74, 0x78, 0x74,
+				0x00, 0x00, 0x00, 0x0B,
+				0x48, 0x65, 0x6C, 0x6C, 0x6F, 0x20, 0x57, 0x6F, 0x72, 0x6C, 0x64,
+				0x0A,
+			},
+			want: []byte{
+				0x00,
+				0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00,
+				0x0A,
+			},
+			wantErr: false,
+		},
+		{
+			name: "client can delete a file",
+			input: []byte{
+				0x04,
+				0x08,
+				0x64, 0x61, 0x74, 0x61, 0x2E, 0x74, 0x78, 0x74,
+				0x0A,
+			},
+			want: []byte{
+				0x00,
+				0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00,
+				0x0A,
+			},
+			wantErr: false,
+		},
+		{
+			name: "client tries to read a deleted file",
+			input: []byte{
+				0x01,
+				0x08,
+				0x64, 0x61, 0x74, 0x61, 0x2E, 0x74, 0x78, 0x74,
+				0x0A,
+			},
+			want: []byte{
+				0x01,
+				0x00, 0x01,
+				0x00, 0x00, 0x00, 0x00,
+				0x0A,
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			_, err := conn.Write(test.input)
+			if err != nil {
+				t.Fatalf("Failed to write to the server")
+			}
+
+			// read the server's response
+			reader := bufio.NewReader(conn)
+			response, err := reader.ReadBytes('\n')
+			if err != nil {
+				t.Fatalf("failed to read data from the server")
+			}
+
+			if test.wantErr {
+				assert.NotNil(t, err)
+			} else {
+				assert.Nil(t, err)
+			}
+
+			assert.Equal(t, test.want, response)
+		})
+	}
+}

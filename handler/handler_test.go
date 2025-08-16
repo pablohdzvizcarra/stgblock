@@ -27,7 +27,7 @@ func TestHandleMessage(t *testing.T) {
 	}
 
 	for name, test := range tests {
-		err := HandleMessage(test.input)
+		_, err := HandleMessage(test.input)
 		t.Logf("Running test: %s", name)
 
 		if test.fails {

@@ -6,6 +6,8 @@ import (
 	"log/slog"
 )
 
+const MIN_FILENAME_LENGTH = 8
+
 // DecodeMessage interprets the raw data received from the server and returns a Message struct.
 func DecodeMessage(rawData []byte) (Message, error) {
 	if len(rawData) < 6 {
@@ -19,9 +21,55 @@ func DecodeMessage(rawData []byte) (Message, error) {
 		return decodeReadMessage(rawData)
 	case 2:
 		return decodeWriteMessage(rawData)
+	case 4:
+		return decodeDeleteMessage(rawData)
 	default:
 		return Message{}, fmt.Errorf("the message type is not supported")
 	}
+}
+
+func decodeDeleteMessage(rawData []byte) (Message, error) {
+	slog.Info("Decoding a Delete message from the client request", "bytesLength=", len(rawData))
+	var offset = 1
+
+	// read the filename length
+	filenameLength := int(rawData[offset])
+	offset += 1
+
+	if filenameLength < MIN_FILENAME_LENGTH {
+		return Message{
+			MessageType: MessageDelete,
+		}, fmt.Errorf("invalid filenameLength=%d, filename length needs to be > 8 bytes", filenameLength)
+	}
+
+	// -2 is necessary because we need to subtract
+	// 1 for the messageType
+	// 1 for the endCharacter
+	if offset+filenameLength > len(rawData)-1 {
+		return Message{
+			MessageType: MessageDelete,
+		}, fmt.Errorf("filename length (%d) exceeds available data (%d)", filenameLength, len(rawData)-offset-2)
+	}
+
+	// extract the filename from the bytes
+	filename := rawData[offset : offset+filenameLength]
+	offset += filenameLength
+
+	// Validates the message have the end character
+	endChar := rawData[offset]
+	if endChar != MessageEndChar {
+		return Message{
+			MessageType:    MessageDelete,
+			FilenameLength: filenameLength,
+			Filename:       string(filename),
+		}, fmt.Errorf("the message does not contains the correct end character at the end of the message")
+	}
+
+	return Message{
+		MessageType:    MessageDelete,
+		FilenameLength: filenameLength,
+		Filename:       string(filename),
+	}, nil
 }
 
 func decodeReadMessage(rawData []byte) (Message, error) {
