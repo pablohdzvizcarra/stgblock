@@ -63,6 +63,19 @@ func TestProcess(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		{
+			name: "process a READ message for a file that does not exists",
+			args: args{
+				message: []byte{0x01, 0x08, 0x64, 0x64, 0x74, 0x61, 0x2E, 0x74, 0x78, 0x74, protocol.MessageEndChar},
+			},
+			want: []byte{
+				0x01,       // status
+				0x00, 0x01, // errorCode
+				0x00, 0x00, 0x00, 0x00, // payloadLength
+				protocol.MessageEndChar,
+			},
+			wantErr: false,
+		},
 	}
 
 	for _, tt := range tests {

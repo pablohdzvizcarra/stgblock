@@ -118,7 +118,7 @@ func ReadFile(filename string) ([]byte, error) {
 	}
 	blockIDs, ok := meta[filename]
 	if !ok {
-		return nil, fmt.Errorf("file %s not found in metadata", filename)
+		return nil, fmt.Errorf("%s file not found in metadata", filename)
 	}
 
 	// create a slice to hold the data from each block
