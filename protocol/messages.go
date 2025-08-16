@@ -5,8 +5,9 @@ const MessageEndChar = 0x0A
 type MessageType int
 
 const (
-	MessageRead  MessageType = 1
-	MessageWrite MessageType = 2
+	MessageRead   MessageType = 1
+	MessageWrite  MessageType = 2
+	MessageDelete MessageType = 4
 )
 
 // Message the server receives an array of bytes from the client, which is serialize into a Message struct.

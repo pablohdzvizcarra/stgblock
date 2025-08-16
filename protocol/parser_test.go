@@ -158,6 +158,48 @@ func TestDecodeMessage(t *testing.T) {
 				Size:           0x00,
 			},
 		},
+		"parse delete message correct": {
+			fails: false,
+			input: []byte{
+				0x04,                                           // messageType
+				0x08,                                           // filenameLength
+				0x64, 0x61, 0x74, 0x61, 0x2E, 0x74, 0x78, 0x74, // filename
+				MessageEndChar, // Any message needs to have an end character
+			},
+			output: protocol.Message{
+				MessageType:    protocol.MessageDelete,
+				FilenameLength: 0x08,
+				Filename:       "data.txt",
+				RawData:        nil,
+				Size:           0x00,
+			},
+		},
+		"return error with not valid filename length in Delete message": {
+			fails: true,
+			input: []byte{
+				0x04,                               // messageType
+				0x06,                               // filenameLength
+				0x64, 0x61, 0x2E, 0x74, 0x78, 0x74, // filename not valid=da.txt
+				MessageEndChar, // Any message needs to have an end character
+			},
+			output: protocol.Message{
+				MessageType: protocol.MessageDelete,
+			},
+		},
+		"return error with not valid filename in Delete message": {
+			fails: true,
+			input: []byte{
+				0x04,                                                 // messageType
+				0x08,                                                 // filenameLength
+				0x64, 0x61, 0x74, 0x61, 0x61, 0x2E, 0x74, 0x78, 0x74, // filename not valid=da.txt
+				MessageEndChar, // Any message needs to have an end character
+			},
+			output: protocol.Message{
+				MessageType:    protocol.MessageDelete,
+				FilenameLength: 0x08,
+				Filename:       "dataa.tx",
+			},
+		},
 	}
 
 	for name, test := range tests {
