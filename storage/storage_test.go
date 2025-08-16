@@ -21,7 +21,7 @@ func TestDeleteFile(t *testing.T) {
 		{
 			name:    "can delete a file from the storage",
 			arg:     "data.txt",
-			want:    []byte{},
+			want:    nil,
 			wantErr: false,
 		},
 	}
