@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"log/slog"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -24,6 +25,12 @@ func TestDeleteFile(t *testing.T) {
 			want:    nil,
 			wantErr: false,
 		},
+		{
+			name:    "error when deleting a file that does not exists",
+			arg:     "noFile.txt",
+			want:    nil,
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -31,6 +38,7 @@ func TestDeleteFile(t *testing.T) {
 			data, err := DeleteFile(tt.arg)
 
 			if tt.wantErr {
+				slog.Error("TEST ERROR", "error", err.Error())
 				assert.NotNil(t, err)
 			} else {
 				assert.Nil(t, err)

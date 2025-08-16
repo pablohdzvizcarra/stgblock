@@ -197,19 +197,17 @@ func loadMetadata() (Metadata, error) {
 	return meta, err
 }
 
+// DeleteFile deletes a file as blocks from the storage system.
+//
+// This function
 func DeleteFile(filename string) ([]byte, error) {
 	slog.Info("starting delete operation for file", "file", filename)
 
 	// Validates if the file exists before delete it
-	data, err := ReadFile(filename)
+	_, err := ReadFile(filename)
 	if err != nil {
 		return nil,
-			fmt.Errorf("an error occurred while validating if the file=%s exists on disk before delete it", filename)
-	}
-
-	if data == nil {
-		return nil,
-			fmt.Errorf("the file=%s does not exists on the storage", filename)
+			fmt.Errorf("an error occurred while validating if the file=%s exists on disk before delete it, error=%v", filename, err)
 	}
 
 	var wg sync.WaitGroup
@@ -231,7 +229,6 @@ func DeleteFile(filename string) ([]byte, error) {
 		return nil, fmt.Errorf("the file=%s does not exists on disk", filename)
 	}
 
-	// TODO: create logic to remove the block addresses from the metadata
 	// remove the file from metadata
 	delete(meta, filename)
 	err = updateMetadata(meta, filename)
