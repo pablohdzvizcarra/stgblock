@@ -432,3 +432,28 @@ func TestDecodeHandshakeRequest(t *testing.T) {
 		})
 	}
 }
+
+func TestEncodeHandshakeResponse(t *testing.T) {
+	tests := []struct {
+		name string
+		arg  protocol.HandshakeResponse
+		want []byte
+	}{
+		{
+			name: "encode a handshake response with error",
+			arg: protocol.HandshakeResponse{
+				Status:     protocol.StatusError,
+				Error:      protocol.ErrorBadRequest,
+				AssignedID: "",
+			},
+			want: []byte{0x01, 0x00, 0x002, 0x0A},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			response := protocol.EncodeHandshakeResponse(tt.arg)
+			assert.Equal(t, tt.want, response)
+		})
+	}
+}

@@ -309,3 +309,15 @@ func DecodeHandshakeRequest(b []byte) (HandshakeRequest, error) {
 		ClientID:       clientID,
 	}, nil
 }
+
+func EncodeHandshakeResponse(h HandshakeResponse) []byte {
+	if h.Status == StatusError {
+		// format: status(1) + error(2) + end(1)
+		out := []byte{byte(StatusError), 0x00, 0x00, MessageEndChar}
+		out[1] = byte(h.Error >> 8)
+		out[2] = byte(h.Error & 0xFF)
+		return out
+	}
+
+	return nil
+}
