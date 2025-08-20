@@ -325,3 +325,32 @@ func TestEncodeMessage(t *testing.T) {
 		})
 	}
 }
+
+func TestDecodeHandshakeRequest(t *testing.T) {
+	tests := []struct {
+		name    string
+		arg     []byte
+		want    protocol.HandshakeRequest
+		wantErr bool
+	}{
+		{
+			name:    "returns error when the byte[] does not contains enough bytes",
+			arg:     []byte{},
+			want:    protocol.HandshakeRequest{},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			response, err := protocol.DecodeHandshakeRequest(tt.arg)
+			if tt.wantErr {
+				assert.NotNil(t, err)
+			} else {
+				assert.Nil(t, err)
+			}
+
+			assert.Equal(t, response, tt.want)
+		})
+	}
+}

@@ -252,3 +252,14 @@ func EncodeResponseMessage(msg Response) ([]byte, error) {
 
 	return response, nil
 }
+
+func DecodeHandshakeRequest(b []byte) (HandshakeRequest, error) {
+	slog.Info("Decoding handshake request from client", "length", len(b))
+	minLen := 3 + 1 + 8 + 1
+
+	if len(b) < minLen {
+		return HandshakeRequest{}, fmt.Errorf("handshake to short length=%d", len(b))
+	}
+
+	return HandshakeRequest{}, nil
+}
