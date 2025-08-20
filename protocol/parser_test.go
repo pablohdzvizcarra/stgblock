@@ -1,7 +1,6 @@
 package protocol_test
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/pablohdzvizcarra/storage-software-cookbook/protocol"
@@ -346,7 +345,8 @@ func TestDecodeHandshakeRequest(t *testing.T) {
 				0x53, 0x54, 0x54, // magic protocol number
 				0x01,                                           // protocol version
 				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // reserved bytes
-				0x14, // client id length
+				0x00, // client id length,
+				MessageEndChar,
 			},
 			want:    protocol.HandshakeRequest{},
 			wantErr: true,
@@ -357,10 +357,65 @@ func TestDecodeHandshakeRequest(t *testing.T) {
 				0x53, 0x54, 0x47, // magic protocol number
 				0x02,                                           // protocol version
 				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // reserved bytes
-				0x14, // client id length
+				0x00, // client id length
 			},
 			want:    protocol.HandshakeRequest{},
 			wantErr: true,
+		},
+		{
+			name: "error when client id is less than 4",
+			arg: []byte{
+				0x53, 0x54, 0x47, // magic protocol number
+				0x01,                                           // protocol version
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // reserved bytes
+				0x03, // client id length
+			},
+			want:    protocol.HandshakeRequest{},
+			wantErr: true,
+		},
+		{
+			name: "error when client id is to short",
+			arg: []byte{
+				0x53, 0x54, 0x47, // magic protocol number
+				0x01,                                           // protocol version
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // reserved bytes
+				0x05,                   // client id length
+				0x44, 0x4F, 0x39, 0x31, // client id
+				MessageEndChar,
+			},
+			want:    protocol.HandshakeRequest{},
+			wantErr: true,
+		},
+		{
+			name: "error when message does not contains end character",
+			arg: []byte{
+				0x53, 0x54, 0x47, // magic protocol number
+				0x01,                                           // protocol version
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // reserved bytes
+				0x04,                         // client id length
+				0x44, 0x4F, 0x39, 0x31, 0x12, // client id
+			},
+			want:    protocol.HandshakeRequest{},
+			wantErr: true,
+		},
+		{
+			name: "decode well formatted handshake message without errors",
+			arg: []byte{
+				0x53, 0x54, 0x47, // magic protocol number
+				0x01,                                           // protocol version
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // reserved bytes
+				0x04,                   // client id length
+				0x44, 0x4F, 0x39, 0x31, // client id
+				MessageEndChar,
+			},
+			want: protocol.HandshakeRequest{
+				Magic:          "STG",
+				Version:        1,
+				Reserved:       []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+				ClientIDLength: 4,
+				ClientID:       "DO91",
+			},
+			wantErr: false,
 		},
 	}
 
@@ -373,8 +428,7 @@ func TestDecodeHandshakeRequest(t *testing.T) {
 				assert.Nil(t, err)
 			}
 
-			assert.Equal(t, response, tt.want)
-			fmt.Println(err)
+			assert.Equal(t, tt.want, response)
 		})
 	}
 }

@@ -50,9 +50,9 @@ const (
 var HandshakeMagic = []byte{'S', 'T', 'G'}
 
 type HandshakeRequest struct {
-	Magic          []byte
+	Magic          string
 	Version        uint8
-	Reserved       uint64
+	Reserved       []byte
 	ClientIDLength uint8
 	ClientID       string
 }

@@ -268,13 +268,44 @@ func DecodeHandshakeRequest(b []byte) (HandshakeRequest, error) {
 	if b[0] != 'S' || b[1] != 'T' || b[2] != 'G' {
 		return HandshakeRequest{}, fmt.Errorf("magic protocol number is wrong magic=%s", b[0:MAGIC_LEN])
 	}
-	offset += 3
+	offset += 3 // increase offset for magic length
 
 	// validating protocol version byte 3
-	protocolVer := b[3]
+	protocolVer := b[offset]
 	if protocolVer != 0x01 {
 		return HandshakeRequest{}, fmt.Errorf("protocol version is not supported version=%d", protocolVer)
 	}
+	offset += 1 // increase offset for protocol version
 
-	return HandshakeRequest{}, nil
+	// getting reserved bytes
+	reservedData := b[offset : offset+8]
+	offset += 8 // increase offset for 8 reserved bytes
+
+	// validating client id length
+	clientIdLen := int(b[offset])
+	if clientIdLen < 4 {
+		return HandshakeRequest{}, fmt.Errorf("client id length needs to be greater than 4 clientIDLen=%d", clientIdLen)
+	}
+	offset += 1 // increase offset for client id length
+
+	// validating client id
+	if offset+clientIdLen > len(b)-1 {
+		return HandshakeRequest{}, fmt.Errorf("client id is to short, clientIDLen=%d", clientIdLen)
+	}
+
+	clientID := string(b[offset : offset+clientIdLen])
+	offset += clientIdLen
+
+	// validate message have end char
+	if b[offset] != 0x0A {
+		return HandshakeRequest{}, fmt.Errorf("handshake message does not contains valid end char, endChar=%d", b[offset])
+	}
+
+	return HandshakeRequest{
+		Magic:          "STG",
+		Version:        1,
+		Reserved:       reservedData,
+		ClientIDLength: uint8(clientIdLen),
+		ClientID:       clientID,
+	}, nil
 }
