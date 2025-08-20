@@ -311,6 +311,7 @@ func DecodeHandshakeRequest(b []byte) (HandshakeRequest, error) {
 }
 
 func EncodeHandshakeResponse(h HandshakeResponse) []byte {
+	slog.Info("Encoding a handshake response with values", "status", h.Status, "error", h.Error)
 	if h.Status == StatusError {
 		// format: status(1) + error(2) + end(1)
 		out := []byte{byte(StatusError), 0x00, 0x00, MessageEndChar}
@@ -319,5 +320,13 @@ func EncodeHandshakeResponse(h HandshakeResponse) []byte {
 		return out
 	}
 
-	return nil
+	// format of success handshake
+	// status(1) + idLen(1) + id + endChar
+	id := []byte(h.AssignedID)
+	out := make([]byte, 0, 1+1+len(id)+1)
+	out = append(out, byte(StatusOk))
+	out = append(out, byte(len(id)))
+	out = append(out, id...)
+	out = append(out, MessageEndChar)
+	return out
 }

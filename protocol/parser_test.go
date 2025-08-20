@@ -448,6 +448,20 @@ func TestEncodeHandshakeResponse(t *testing.T) {
 			},
 			want: []byte{0x01, 0x00, 0x002, 0x0A},
 		},
+		{
+			name: "encode success handshake response into bytes",
+			arg: protocol.HandshakeResponse{
+				Status:     protocol.StatusOk,
+				Error:      protocol.NoError,
+				AssignedID: "Do9449oD",
+			},
+			want: []byte{
+				0x00,                                           // status
+				0x08,                                           // id length
+				0x44, 0x6f, 0x39, 0x34, 0x34, 0x39, 0x6f, 0x44, // id
+				0x0A, // endChar
+			},
+		},
 	}
 
 	for _, tt := range tests {
