@@ -1,6 +1,7 @@
 package protocol_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/pablohdzvizcarra/storage-software-cookbook/protocol"
@@ -339,6 +340,28 @@ func TestDecodeHandshakeRequest(t *testing.T) {
 			want:    protocol.HandshakeRequest{},
 			wantErr: true,
 		},
+		{
+			name: "throw error when magic protocol number is wrong",
+			arg: []byte{
+				0x53, 0x54, 0x54, // magic protocol number
+				0x01,                                           // protocol version
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // reserved bytes
+				0x14, // client id length
+			},
+			want:    protocol.HandshakeRequest{},
+			wantErr: true,
+		},
+		{
+			name: "throw error when protocol version is different from 1",
+			arg: []byte{
+				0x53, 0x54, 0x47, // magic protocol number
+				0x02,                                           // protocol version
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // reserved bytes
+				0x14, // client id length
+			},
+			want:    protocol.HandshakeRequest{},
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -351,6 +374,7 @@ func TestDecodeHandshakeRequest(t *testing.T) {
 			}
 
 			assert.Equal(t, response, tt.want)
+			fmt.Println(err)
 		})
 	}
 }

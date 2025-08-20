@@ -7,6 +7,8 @@ import (
 )
 
 const MIN_FILENAME_LENGTH = 8
+const MAGIC_LEN = 3
+const PROTOCOL_VERSION_LEN = 1
 
 // DecodeMessage interprets the raw data received from the server and returns a Message struct.
 func DecodeMessage(rawData []byte) (Message, error) {
@@ -255,10 +257,23 @@ func EncodeResponseMessage(msg Response) ([]byte, error) {
 
 func DecodeHandshakeRequest(b []byte) (HandshakeRequest, error) {
 	slog.Info("Decoding handshake request from client", "length", len(b))
-	minLen := 3 + 1 + 8 + 1
+	minLen := MAGIC_LEN + PROTOCOL_VERSION_LEN + 8 + 1
+	var offset = 0
 
 	if len(b) < minLen {
 		return HandshakeRequest{}, fmt.Errorf("handshake to short length=%d", len(b))
+	}
+
+	// Validate magic number handshake for protocol bytes 0, 1, 2
+	if b[0] != 'S' || b[1] != 'T' || b[2] != 'G' {
+		return HandshakeRequest{}, fmt.Errorf("magic protocol number is wrong magic=%s", b[0:MAGIC_LEN])
+	}
+	offset += 3
+
+	// validating protocol version byte 3
+	protocolVer := b[3]
+	if protocolVer != 0x01 {
+		return HandshakeRequest{}, fmt.Errorf("protocol version is not supported version=%d", protocolVer)
 	}
 
 	return HandshakeRequest{}, nil
