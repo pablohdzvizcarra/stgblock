@@ -374,7 +374,7 @@ func TestDecodeHandshakeRequest(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "error when client id is to short",
+			name: "error when client id is too short",
 			arg: []byte{
 				0x53, 0x54, 0x47, // magic protocol number
 				0x01,                                           // protocol version

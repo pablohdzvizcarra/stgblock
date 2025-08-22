@@ -261,7 +261,7 @@ func DecodeHandshakeRequest(b []byte) (HandshakeRequest, error) {
 	var offset = 0
 
 	if len(b) < minLen {
-		return HandshakeRequest{}, fmt.Errorf("handshake to short length=%d", len(b))
+		return HandshakeRequest{}, fmt.Errorf("handshake too short length=%d", len(b))
 	}
 
 	// Validate magic number handshake for protocol bytes 0, 1, 2
@@ -290,7 +290,7 @@ func DecodeHandshakeRequest(b []byte) (HandshakeRequest, error) {
 
 	// validating client id
 	if offset+clientIdLen > len(b)-1 {
-		return HandshakeRequest{}, fmt.Errorf("client id is to short, clientIDLen=%d", clientIdLen)
+		return HandshakeRequest{}, fmt.Errorf("client id is too short, clientIDLen=%d", clientIdLen)
 	}
 
 	clientID := string(b[offset : offset+clientIdLen])
