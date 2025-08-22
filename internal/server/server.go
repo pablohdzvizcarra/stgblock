@@ -14,7 +14,7 @@ import (
 
 const ApplicationPort = ":8001"
 
-var peers = NewClientRegistry()
+var clients = NewClientRegistry()
 
 // StartApplication starts the TCP server and begins accepting client connections.
 func StartApplication() (net.Listener, error) {
@@ -56,11 +56,11 @@ func handleClientConnection(conn net.Conn) {
 
 	// If the handshake is not successful we exit of the function
 	// with this validation we avoid enter in the connection loop
-	peer, ok := performHandshake(reader, conn)
+	client, ok := performHandshake(reader, conn)
 	if !ok {
 		return // handshake failed; response already sent (if any)
 	}
-	defer peers.Remove(peer.ID)
+	defer clients.Remove(client.ID)
 
 	mp := &processor.DefaultMessageProcessor{}
 	for {
@@ -128,7 +128,7 @@ func performHandshake(reader *bufio.Reader, conn net.Conn) (*Client, bool) {
 		ConnectedAt: time.Now(),
 	}
 
-	peers.Add(peer)
+	clients.Add(peer)
 
 	resp := protocol.EncodeHandshakeResponse(protocol.HandshakeResponse{
 		Status:     protocol.StatusOk,
