@@ -7,6 +7,8 @@ import (
 )
 
 const MIN_FILENAME_LENGTH = 8
+const MAGIC_LEN = 3
+const PROTOCOL_VERSION_LEN = 1
 
 // DecodeMessage interprets the raw data received from the server and returns a Message struct.
 func DecodeMessage(rawData []byte) (Message, error) {
@@ -251,4 +253,80 @@ func EncodeResponseMessage(msg Response) ([]byte, error) {
 	response[len(response)-1] = MessageEndChar
 
 	return response, nil
+}
+
+func DecodeHandshakeRequest(b []byte) (HandshakeRequest, error) {
+	slog.Info("Decoding handshake request from client", "length", len(b))
+	minLen := MAGIC_LEN + PROTOCOL_VERSION_LEN + 8 + 1
+	var offset = 0
+
+	if len(b) < minLen {
+		return HandshakeRequest{}, fmt.Errorf("handshake too short length=%d", len(b))
+	}
+
+	// Validate magic number handshake for protocol bytes 0, 1, 2
+	if b[0] != 'S' || b[1] != 'T' || b[2] != 'G' {
+		return HandshakeRequest{}, fmt.Errorf("magic protocol number is wrong magic=%s", b[0:MAGIC_LEN])
+	}
+	offset += 3 // increase offset for magic length
+
+	// validating protocol version byte 3
+	protocolVer := b[offset]
+	if protocolVer <= 0x00 {
+		return HandshakeRequest{}, fmt.Errorf("protocol version could not be negative=%d", protocolVer)
+	}
+	offset += 1 // increase offset for protocol version
+
+	// getting reserved bytes
+	reservedData := b[offset : offset+8]
+	offset += 8 // increase offset for 8 reserved bytes
+
+	// validating client id length
+	clientIdLen := int(b[offset])
+	if clientIdLen < 4 {
+		return HandshakeRequest{}, fmt.Errorf("client id length needs to be greater than 4 clientIDLen=%d", clientIdLen)
+	}
+	offset += 1 // increase offset for client id length
+
+	// validating client id
+	if offset+clientIdLen > len(b)-1 {
+		return HandshakeRequest{}, fmt.Errorf("client id is too short, clientIDLen=%d", clientIdLen)
+	}
+
+	clientID := string(b[offset : offset+clientIdLen])
+	offset += clientIdLen
+
+	// validate message have end char
+	if b[offset] != 0x0A {
+		return HandshakeRequest{}, fmt.Errorf("handshake message does not contains valid end char, endChar=%d", b[offset])
+	}
+
+	return HandshakeRequest{
+		Magic:          "STG",
+		Version:        protocolVer,
+		Reserved:       reservedData,
+		ClientIDLength: uint8(clientIdLen),
+		ClientID:       clientID,
+	}, nil
+}
+
+func EncodeHandshakeResponse(h HandshakeResponse) []byte {
+	slog.Info("Encoding a handshake response with values", "status", h.Status, "error", h.Error)
+	if h.Status == StatusError {
+		// format: status(1) + error(2) + end(1)
+		out := []byte{byte(StatusError), 0x00, 0x00, MessageEndChar}
+		out[1] = byte(h.Error >> 8)
+		out[2] = byte(h.Error & 0xFF)
+		return out
+	}
+
+	// format of success handshake
+	// status(1) + idLen(1) + id + endChar
+	id := []byte(h.AssignedID)
+	out := make([]byte, 0, 1+1+len(id)+1)
+	out = append(out, byte(StatusOk))
+	out = append(out, byte(len(id)))
+	out = append(out, id...)
+	out = append(out, MessageEndChar)
+	return out
 }

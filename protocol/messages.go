@@ -42,3 +42,23 @@ type Response struct {
 	PayloadLength uint32
 	Payload       []byte
 }
+
+const (
+	ProtocolVersion byte = 1
+)
+
+var HandshakeMagic = []byte{'S', 'T', 'G'}
+
+type HandshakeRequest struct {
+	Magic          string
+	Version        uint8
+	Reserved       []byte
+	ClientIDLength uint8
+	ClientID       string
+}
+
+type HandshakeResponse struct {
+	Status     ResponseStatus
+	Error      ErrorCode
+	AssignedID string
+}

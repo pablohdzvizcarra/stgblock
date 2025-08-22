@@ -325,3 +325,149 @@ func TestEncodeMessage(t *testing.T) {
 		})
 	}
 }
+
+func TestDecodeHandshakeRequest(t *testing.T) {
+	tests := []struct {
+		name    string
+		arg     []byte
+		want    protocol.HandshakeRequest
+		wantErr bool
+	}{
+		{
+			name:    "returns error when the byte[] does not contains enough bytes",
+			arg:     []byte{},
+			want:    protocol.HandshakeRequest{},
+			wantErr: true,
+		},
+		{
+			name: "throw error when magic protocol number is wrong",
+			arg: []byte{
+				0x53, 0x54, 0x54, // magic protocol number
+				0x01,                                           // protocol version
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // reserved bytes
+				0x00, // client id length,
+				MessageEndChar,
+			},
+			want:    protocol.HandshakeRequest{},
+			wantErr: true,
+		},
+		{
+			name: "throw error when protocol version is different from 1",
+			arg: []byte{
+				0x53, 0x54, 0x47, // magic protocol number
+				0x02,                                           // protocol version
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // reserved bytes
+				0x00, // client id length
+			},
+			want:    protocol.HandshakeRequest{},
+			wantErr: true,
+		},
+		{
+			name: "error when client id is less than 4",
+			arg: []byte{
+				0x53, 0x54, 0x47, // magic protocol number
+				0x01,                                           // protocol version
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // reserved bytes
+				0x03, // client id length
+			},
+			want:    protocol.HandshakeRequest{},
+			wantErr: true,
+		},
+		{
+			name: "error when client id is too short",
+			arg: []byte{
+				0x53, 0x54, 0x47, // magic protocol number
+				0x01,                                           // protocol version
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // reserved bytes
+				0x05,                   // client id length
+				0x44, 0x4F, 0x39, 0x31, // client id
+				MessageEndChar,
+			},
+			want:    protocol.HandshakeRequest{},
+			wantErr: true,
+		},
+		{
+			name: "error when message does not contains end character",
+			arg: []byte{
+				0x53, 0x54, 0x47, // magic protocol number
+				0x01,                                           // protocol version
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // reserved bytes
+				0x04,                         // client id length
+				0x44, 0x4F, 0x39, 0x31, 0x12, // client id
+			},
+			want:    protocol.HandshakeRequest{},
+			wantErr: true,
+		},
+		{
+			name: "decode well formatted handshake message without errors",
+			arg: []byte{
+				0x53, 0x54, 0x47, // magic protocol number
+				0x01,                                           // protocol version
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // reserved bytes
+				0x04,                   // client id length
+				0x44, 0x4F, 0x39, 0x31, // client id
+				MessageEndChar,
+			},
+			want: protocol.HandshakeRequest{
+				Magic:          "STG",
+				Version:        1,
+				Reserved:       []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+				ClientIDLength: 4,
+				ClientID:       "DO91",
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			response, err := protocol.DecodeHandshakeRequest(tt.arg)
+			if tt.wantErr {
+				assert.NotNil(t, err)
+			} else {
+				assert.Nil(t, err)
+			}
+
+			assert.Equal(t, tt.want, response)
+		})
+	}
+}
+
+func TestEncodeHandshakeResponse(t *testing.T) {
+	tests := []struct {
+		name string
+		arg  protocol.HandshakeResponse
+		want []byte
+	}{
+		{
+			name: "encode a handshake response with error",
+			arg: protocol.HandshakeResponse{
+				Status:     protocol.StatusError,
+				Error:      protocol.ErrorBadRequest,
+				AssignedID: "",
+			},
+			want: []byte{0x01, 0x00, 0x002, 0x0A},
+		},
+		{
+			name: "encode success handshake response into bytes",
+			arg: protocol.HandshakeResponse{
+				Status:     protocol.StatusOk,
+				Error:      protocol.NoError,
+				AssignedID: "Do9449oD",
+			},
+			want: []byte{
+				0x00,                                           // status
+				0x08,                                           // id length
+				0x44, 0x6f, 0x39, 0x34, 0x34, 0x39, 0x6f, 0x44, // id
+				0x0A, // endChar
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			response := protocol.EncodeHandshakeResponse(tt.arg)
+			assert.Equal(t, tt.want, response)
+		})
+	}
+}

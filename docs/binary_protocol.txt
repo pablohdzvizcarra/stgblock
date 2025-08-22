@@ -1,4 +1,52 @@
 ========================================================================================
+HANDSHAKE MESSAGE FROM CLIENT
+========================================================================================
+
+Request:
+- [magic(3 bytes) = STG]
+- [version (1 byte)]
+- [reserved (8 bytes)]
+- [clientIDLen (1 byte)]
+- [clientID (clientIDLen bytes)]
+- [end (1 byte) = 0x0A]
+
+-------------------
+- magic
+    3 bytes that represents the protocol magic number.
+
+
+-------------------
+- version
+    1 byte that represents the version of the protocol. Currently, only version 0x01 is supported.
+
+-------------------
+- reserved
+    8 bytes that are reserved for future use. Clients must send these bytes as zero.
+
+-------------------
+- clientIDLen
+    1 byte that represents the length of the clientID.
+
+-------------------
+- clientID
+    (clientIDLen bytes) the unique identifier for the client.
+
+-------------------
+- end
+    1 byte indicating the end of the message (0x0A - \n).
+
+RESPONSE (OK):
+- [status (1 byte) 0x00]
+- [assignedIDLen (1 byte)]
+- [assignedID (assignedIDLen bytes)]
+- [endChar (1 byte 0x0A)]
+
+RESPONSE (ERR):
+- [status (1 byte) 0x01]
+- [errorCode (2 bytes)]
+- [endChar (1 byte 0x0A)]
+
+========================================================================================
 CLIENT RESPONSES
 ========================================================================================
 
@@ -106,17 +154,6 @@ endChar
 
 
 ========================================================================================
-DESIGN ISSUES
-========================================================================================
-- Currently the protocol requires as end character the byte 0x0A (LF), if a client wants to send a message
-    that does not end with this byte, the server never reads the first bytes send, because it is
-    waiting for the end character to process the message. The design about add the character as an end message is good,
-    but the problem is if a custom client want so to connect to the server and was not designed with this in mind,
-    it will not be able to communicate effectively, leading to potential data loss or corruption and cause false negatives.
-
-
-
-========================================================================================
 DELETE MESSAGE FROM CLIENT
 ========================================================================================
 
@@ -146,3 +183,13 @@ filename
 -------------------
 endChar
 - 1 byte indicating the end of the message (0x0A - \n).
+
+
+========================================================================================
+DESIGN ISSUES
+========================================================================================
+- Currently the protocol requires as end character the byte 0x0A (LF), if a client wants to send a message
+    that does not end with this byte, the server never reads the first bytes send, because it is
+    waiting for the end character to process the message. The design about add the character as an end message is good,
+    but the problem is if a custom client want so to connect to the server and was not designed with this in mind,
+    it will not be able to communicate effectively, leading to potential data loss or corruption and cause false negatives.
