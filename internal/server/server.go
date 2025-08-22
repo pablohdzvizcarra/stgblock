@@ -2,6 +2,8 @@ package server
 
 import (
 	"bufio"
+	"crypto/rand"
+	"encoding/hex"
 	"log/slog"
 	"net"
 	"time"
@@ -138,5 +140,7 @@ func performHandshake(reader *bufio.Reader, conn net.Conn) (*Peer, bool) {
 }
 
 func randomID() string {
-	panic("unimplemented")
+	var b [8]byte
+	_, _ = rand.Read(b[:])
+	return hex.EncodeToString(b[:])
 }
