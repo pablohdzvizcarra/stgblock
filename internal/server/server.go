@@ -2,13 +2,18 @@ package server
 
 import (
 	"bufio"
+	"fmt"
 	"log/slog"
 	"net"
+	"time"
 
 	"github.com/pablohdzvizcarra/storage-software-cookbook/processor"
+	"github.com/pablohdzvizcarra/storage-software-cookbook/protocol"
 )
 
 const ApplicationPort = ":8001"
+
+var peers = NewRegistry()
 
 // StartApplication starts the TCP server and begins accepting client connections.
 func StartApplication() (net.Listener, error) {
@@ -48,6 +53,14 @@ func handleClientConnection(conn net.Conn) {
 	slog.Info("Client connected", "address", conn.RemoteAddr())
 	reader := bufio.NewReader(conn)
 
+	// If the handshake is not successful we exit of the function
+	// with this validation we avoid enter in the connection loop
+	peer, ok := performHandshake(reader, conn)
+	if !ok {
+		return // handshake failed; response already sent (if any)
+	}
+	defer peers.Remove(peer.ID)
+
 	mp := &processor.DefaultMessageProcessor{}
 	for {
 		message, err := reader.ReadBytes('\n')
@@ -73,4 +86,27 @@ func handleClientConnection(conn net.Conn) {
 			slog.Error("Error writing response to the client", "error", err)
 		}
 	}
+}
+
+func performHandshake(reader *bufio.Reader, conn net.Conn) (*Peer, bool) {
+	slog.Info("Start to process the client handshake")
+	_ = conn.SetReadDeadline(time.Now().Add(10 * time.Second))
+	raw, err := reader.ReadBytes(protocol.MessageEndChar)
+	if err != nil {
+		slog.Error("handshake read failed", "addr", conn.RemoteAddr(), "error", err)
+		return nil, false
+	}
+	req, err := protocol.DecodeHandshakeRequest(raw)
+	if err != nil {
+		slog.Error("bad handshake", "addr", conn.RemoteAddr(), "error", err)
+		resp := protocol.EncodeHandshakeResponse(protocol.HandshakeResponse{
+			Status: protocol.StatusError, Error: protocol.ErrorBadRequest,
+		})
+		_, _ = conn.Write(resp)
+		return nil, false
+	}
+
+	fmt.Println(req)
+
+	return nil, false
 }
