@@ -273,7 +273,7 @@ func DecodeHandshakeRequest(b []byte) (HandshakeRequest, error) {
 	// validating protocol version byte 3
 	protocolVer := b[offset]
 	if protocolVer <= 0x00 {
-		return HandshakeRequest{}, fmt.Errorf("protocol version is not supported version=%d", protocolVer)
+		return HandshakeRequest{}, fmt.Errorf("protocol version could not be negative=%d", protocolVer)
 	}
 	offset += 1 // increase offset for protocol version
 

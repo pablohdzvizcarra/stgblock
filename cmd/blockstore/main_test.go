@@ -22,7 +22,7 @@ func startTestTCPClient() (net.Conn, error) {
 	return conn, nil
 }
 
-func TestHandshake(t *testing.T) {
+func TestReceiveErrorHandshakeResponse(t *testing.T) {
 	// =================== Start the main application server for testing ===================
 	listener, err := server.StartApplication()
 	if err != nil {
@@ -62,6 +62,74 @@ func TestHandshake(t *testing.T) {
 				0x01,       // status (1 byte)
 				0x00, 0x02, // Code error (2 bytes)
 				0x0A, // endChar
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := conn.Write(tt.args)
+			if err != nil {
+				t.Fatal("failed to write to the server")
+			}
+			if tt.wantErr {
+				assert.NotNil(t, err)
+			} else {
+				assert.Nil(t, err)
+			}
+
+			_ = conn.SetReadDeadline(time.Now().Add(2 * time.Second)) // avoid hanging if no '\n'
+			reader := bufio.NewReader(conn)
+
+			resp, err := reader.ReadBytes('\n')
+			assert.Nil(t, err)
+			assert.Equal(t, tt.want, resp)
+		})
+	}
+}
+
+func TestReceiveSuccessHandshakeResponse(t *testing.T) {
+	// =================== Start the main application server for testing ===================
+	listener, err := server.StartApplication()
+	if err != nil {
+		t.Fatalf("failed to start the application: %v", err)
+	}
+	defer listener.Close()
+
+	// Allow the server a moment to start
+	time.Sleep(100 * time.Millisecond)
+	// =====================================================================================
+
+	// Create the client to send messages to the application
+	conn, err := startTestTCPClient()
+	if err != nil {
+		t.FailNow()
+	}
+	defer conn.Close()
+	slog.Info("Test client created, ready to send messages")
+
+	tests := []struct {
+		name    string
+		args    []byte
+		want    []byte
+		wantErr bool
+	}{
+		{
+			name: "receive success handshake response from server",
+			args: []byte{
+				0x53, 0x54, 0x47, // magic protocol number
+				0x01,                                           // protocol version
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // reserved bytes
+				0x04,                   // client id length
+				0x44, 0x4F, 0x39, 0x31, // client id
+				0x0A, // endChar
+			},
+			want: []byte{
+				0x0,                    // status
+				0x4,                    // peer id length
+				0x44, 0x4f, 0x39, 0x31, // peer id
+				0xa, // end char
 			},
 			wantErr: false,
 		},

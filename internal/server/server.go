@@ -2,7 +2,6 @@ package server
 
 import (
 	"bufio"
-	"fmt"
 	"log/slog"
 	"net"
 	"time"
@@ -106,7 +105,38 @@ func performHandshake(reader *bufio.Reader, conn net.Conn) (*Peer, bool) {
 		return nil, false
 	}
 
-	fmt.Println(req)
+	if req.Version != protocol.ProtocolVersion {
+		slog.Error("unsupported version", "got", req.Version, "want", protocol.ProtocolVersion)
+		resp := protocol.EncodeHandshakeResponse(protocol.HandshakeResponse{
+			Status: protocol.StatusError, Error: protocol.ErrorBadRequest,
+		})
+		_, _ = conn.Write(resp)
+		return nil, false
+	}
 
-	return nil, false
+	id := req.ClientID
+	if id == "" {
+		id = randomID()
+	}
+	peer := &Peer{
+		ID:          id,
+		Version:     req.Version,
+		Addr:        conn.RemoteAddr().String(),
+		Conn:        conn,
+		ConnectedAt: time.Now(),
+	}
+
+	peers.Add(peer)
+
+	resp := protocol.EncodeHandshakeResponse(protocol.HandshakeResponse{
+		Status:     protocol.StatusOk,
+		AssignedID: id,
+	})
+	_, _ = conn.Write(resp)
+	slog.Info("handshake completed", "peerID", peer.ID, "addr", peer.Addr, "version", peer.Version)
+	return peer, true
+}
+
+func randomID() string {
+	panic("unimplemented")
 }
