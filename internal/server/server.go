@@ -14,7 +14,7 @@ import (
 
 const ApplicationPort = ":8001"
 
-var peers = NewRegistry()
+var peers = NewClientRegistry()
 
 // StartApplication starts the TCP server and begins accepting client connections.
 func StartApplication() (net.Listener, error) {
@@ -89,7 +89,7 @@ func handleClientConnection(conn net.Conn) {
 	}
 }
 
-func performHandshake(reader *bufio.Reader, conn net.Conn) (*Peer, bool) {
+func performHandshake(reader *bufio.Reader, conn net.Conn) (*Client, bool) {
 	slog.Info("Start to process the client handshake")
 	_ = conn.SetReadDeadline(time.Now().Add(10 * time.Second))
 	raw, err := reader.ReadBytes(protocol.MessageEndChar)
@@ -120,7 +120,7 @@ func performHandshake(reader *bufio.Reader, conn net.Conn) (*Peer, bool) {
 	if id == "" {
 		id = randomID()
 	}
-	peer := &Peer{
+	peer := &Client{
 		ID:          id,
 		Version:     req.Version,
 		Addr:        conn.RemoteAddr().String(),

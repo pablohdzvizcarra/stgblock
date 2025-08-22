@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-type Peer struct {
+type Client struct {
 	ID          string
 	Version     byte
 	Addr        string
@@ -15,28 +15,28 @@ type Peer struct {
 	Metadata    map[string]string
 }
 
-type Registry struct {
+type ClientRegistry struct {
 	mu    sync.RWMutex
-	peers map[string]*Peer
+	peers map[string]*Client
 }
 
-func NewRegistry() *Registry {
-	return &Registry{peers: make(map[string]*Peer)}
+func NewClientRegistry() *ClientRegistry {
+	return &ClientRegistry{peers: make(map[string]*Client)}
 }
 
-func (r *Registry) Add(p *Peer) {
+func (r *ClientRegistry) Add(p *Client) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.peers[p.ID] = p
 }
 
-func (r *Registry) Remove(id string) {
+func (r *ClientRegistry) Remove(id string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	delete(r.peers, id)
 }
 
-func (r *Registry) Get(id string) (*Peer, bool) {
+func (r *ClientRegistry) Get(id string) (*Client, bool) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	p, ok := r.peers[id]
