@@ -303,7 +303,7 @@ func DecodeHandshakeRequest(b []byte) (HandshakeRequest, error) {
 
 	return HandshakeRequest{
 		Magic:          "STG",
-		Version:        1,
+		Version:        protocolVer,
 		Reserved:       reservedData,
 		ClientIDLength: uint8(clientIdLen),
 		ClientID:       clientID,
