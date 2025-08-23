@@ -8,13 +8,14 @@ import (
 	"net"
 	"time"
 
+	"github.com/pablohdzvizcarra/storage-software-cookbook/pkg/client"
 	"github.com/pablohdzvizcarra/storage-software-cookbook/processor"
 	"github.com/pablohdzvizcarra/storage-software-cookbook/protocol"
 )
 
 const ApplicationPort = ":8001"
 
-var clients = NewClientRegistry()
+var clients = client.NewClientRegistry()
 
 // StartApplication starts the TCP server and begins accepting client connections.
 func StartApplication() (net.Listener, error) {
@@ -48,6 +49,9 @@ func StartApplication() (net.Listener, error) {
 }
 
 // handleClientConnection manages a client connection.
+//
+// This is the connection loop where server receive and send message to clients.
+// When a client is exited from this function that means the connection was terminated.
 // Clients must send a '\n' character to terminate the message.
 func handleClientConnection(conn net.Conn) {
 	defer conn.Close()
@@ -67,29 +71,29 @@ func handleClientConnection(conn net.Conn) {
 		message, err := reader.ReadBytes('\n')
 		if err != nil {
 			if err.Error() == "EOF" {
-				slog.Info("Client disconnected", "address", conn.RemoteAddr())
+				slog.Info("Client disconnected", "client", client.ID, "address", conn.RemoteAddr())
 				break
 			}
-			slog.Error("Error reading data from the client", "error", err)
+			slog.Error("Error reading data", "client", client.ID, "error", err)
 			break
 		}
 
-		slog.Info("Receiving data from the client", "bytes", len(message))
+		slog.Info("Receiving data", "client", client.ID, "bytes", len(message))
 
-		response, err := mp.Process(message)
+		response, err := mp.Process(message, client)
 		if err != nil {
-			slog.Error("Error processing message", "error", err)
+			slog.Error("Error processing message", "client", client.ID, "error", err)
 			// In a future iteration, send an error response back to the client
 		}
 
-		slog.Info("Sending response to the client", "byteSize", len(response))
+		slog.Info("Sending a message response", "client", client.ID, "byteSize", len(response))
 		if _, err = conn.Write(response); err != nil {
-			slog.Error("Error writing response to the client", "error", err)
+			slog.Error("Error writing response", "client", client.ID, "error", err)
 		}
 	}
 }
 
-func performHandshake(reader *bufio.Reader, conn net.Conn) (*Client, bool) {
+func performHandshake(reader *bufio.Reader, conn net.Conn) (*client.Client, bool) {
 	slog.Info("Start to process the client handshake")
 	_ = conn.SetReadDeadline(time.Now().Add(10 * time.Second))
 	raw, err := reader.ReadBytes(protocol.MessageEndChar)
@@ -120,7 +124,7 @@ func performHandshake(reader *bufio.Reader, conn net.Conn) (*Client, bool) {
 	if id == "" {
 		id = randomID()
 	}
-	peer := &Client{
+	client := &client.Client{
 		ID:          id,
 		Version:     req.Version,
 		Addr:        conn.RemoteAddr().String(),
@@ -128,15 +132,15 @@ func performHandshake(reader *bufio.Reader, conn net.Conn) (*Client, bool) {
 		ConnectedAt: time.Now(),
 	}
 
-	clients.Add(peer)
+	clients.Add(client)
 
 	resp := protocol.EncodeHandshakeResponse(protocol.HandshakeResponse{
 		Status:     protocol.StatusOk,
 		AssignedID: id,
 	})
 	_, _ = conn.Write(resp)
-	slog.Info("handshake completed", "peerID", peer.ID, "addr", peer.Addr, "version", peer.Version)
-	return peer, true
+	slog.Info("handshake completed", "clientID", client.ID, "addr", client.Addr, "version", client.Version)
+	return client, true
 }
 
 func randomID() string {
