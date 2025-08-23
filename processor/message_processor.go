@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/pablohdzvizcarra/storage-software-cookbook/handler"
+	"github.com/pablohdzvizcarra/storage-software-cookbook/pkg/client"
 	"github.com/pablohdzvizcarra/storage-software-cookbook/protocol"
 )
 
@@ -18,20 +19,20 @@ type MessageProcessor interface {
 type DefaultMessageProcessor struct{}
 
 // Process decodes the message, handles it, and send back the response.
-func (d *DefaultMessageProcessor) Process(message []byte) ([]byte, error) {
-	slog.Info("Serializing the raw data from the client into a message format")
+func (d *DefaultMessageProcessor) Process(message []byte, client *client.Client) ([]byte, error) {
+	slog.Info("Serializing the raw data from the client into a message format", "client", client.ID)
 	msg, err := protocol.DecodeMessage(message)
 	if err != nil {
-		slog.Error("Error parsing the message", "error", err)
+		slog.Error("Error parsing the message", "client", client.ID, "error", err)
 		return nil, err
 	}
 
 	// Processing the client message, operations like WRITE & READ
-	slog.Info("Handling the message", "messageType", msg.MessageType, "filename", msg.Filename)
+	slog.Info("Handling the message", "client", client.ID, "messageType", msg.MessageType, "filename", msg.Filename)
 	respBytes, err := handler.HandleMessage(msg)
 
 	if err != nil {
-		slog.Error("Error while handling the message", "error", err)
+		slog.Error("Error while handling the message", "client", client.ID, "error", err)
 		return processErrorResponse(err, msg)
 	}
 
@@ -40,17 +41,17 @@ func (d *DefaultMessageProcessor) Process(message []byte) ([]byte, error) {
 		msg.Size = uint32(len(respBytes))
 	}
 
-	slog.Info("Creating a response message for the client", "type", msg.MessageType, "payloadLength", msg.Size)
+	slog.Info("Creating a response message", "client", client.ID, "type", msg.MessageType, "payloadLength", msg.Size)
 	response, err := protocol.CreateClientResponse(msg)
 	if err != nil {
-		slog.Error("Error creating response", "error", err)
+		slog.Error("Error creating response", "client", client.ID, "error", err)
 		return nil, err
 	}
 
-	slog.Info("Encoding the client message response into protocol format")
+	slog.Info("Encoding the client message response into protocol format", "client", client.ID)
 	rawResponse, err := protocol.EncodeResponseMessage(response)
 	if err != nil {
-		slog.Error("Error encoding response", "error", err)
+		slog.Error("Error encoding response", "client", client.ID, "error", err)
 		return nil, err
 	}
 

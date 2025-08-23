@@ -3,13 +3,19 @@ package processor
 import (
 	"testing"
 
+	"github.com/pablohdzvizcarra/storage-software-cookbook/pkg/client"
 	"github.com/pablohdzvizcarra/storage-software-cookbook/protocol"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestProcess(t *testing.T) {
+
+	dummyClient := client.Client{
+		ID: "89DF045K",
+	}
 	type args struct {
 		message []byte
+		client  client.Client
 	}
 	tests := []struct {
 		name    string
@@ -28,6 +34,7 @@ func TestProcess(t *testing.T) {
 					0x48, 0x65, 0x6C, 0x6C, 0x6F, 0x20, 0x57, 0x6F, 0x72, 0x6C, 0x64, // content
 					protocol.MessageEndChar,
 				},
+				client: dummyClient,
 			},
 			want: []byte{
 				0x00,       // status
@@ -41,6 +48,7 @@ func TestProcess(t *testing.T) {
 			name: "process a valid READ message",
 			args: args{
 				message: []byte{0x01, 0x08, 0x64, 0x61, 0x74, 0x61, 0x2E, 0x74, 0x78, 0x74, protocol.MessageEndChar},
+				client:  dummyClient,
 			},
 			want: []byte{
 				0x0,      // status
@@ -54,6 +62,7 @@ func TestProcess(t *testing.T) {
 			name: "process a valid DELETE message",
 			args: args{
 				message: []byte{0x04, 0x08, 0x64, 0x61, 0x74, 0x61, 0x2E, 0x74, 0x78, 0x74, protocol.MessageEndChar},
+				client:  dummyClient,
 			},
 			want: []byte{
 				0x00,       // status
@@ -67,6 +76,7 @@ func TestProcess(t *testing.T) {
 			name: "process a READ message for a file that does not exists",
 			args: args{
 				message: []byte{0x01, 0x08, 0x64, 0x64, 0x74, 0x61, 0x2E, 0x74, 0x78, 0x74, protocol.MessageEndChar},
+				client:  dummyClient,
 			},
 			want: []byte{
 				0x01,       // status
@@ -81,7 +91,7 @@ func TestProcess(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mp := DefaultMessageProcessor{}
-			got, err := mp.Process(tt.args.message)
+			got, err := mp.Process(tt.args.message, &tt.args.client)
 
 			if tt.wantErr {
 				assert.NotNil(t, err)
