@@ -525,3 +525,45 @@ func TestDecodeWriteMessage(t *testing.T) {
 		})
 	}
 }
+
+func TestDecodeUpdateMessage(t *testing.T) {
+	tests := []struct {
+		name    string
+		arg     []byte
+		want    protocol.Message
+		wantErr bool
+	}{
+		{
+			name: "error when update request does not have enough bytes",
+			arg: []byte{
+				0x03,                                           // message type
+				0x08,                                           // filename length
+				0x64, 0x61, 0x74, 0x61, 0x2E, 0x74, 0x78, 0x74, // filename
+				0x00, 0x00, 0x00, 0x0D, // size
+				0x62, 0x6C, 0x6F, 0x63, 0x6B, 0x2D, 0x73, 0x74, 0x6F, 0x72, 0x61, 0x67, 0x65, // data
+				MessageEndChar,
+			},
+			want: protocol.Message{
+				MessageType:    protocol.MessageUpdate,
+				FilenameLength: 8,
+				Filename:       "data.txt",
+				Size:           13,
+				RawData:        []byte{0x62, 0x6C, 0x6F, 0x63, 0x6B, 0x2D, 0x73, 0x74, 0x6F, 0x72, 0x61, 0x67, 0x65},
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			message, err := protocol.DecodeMessage(test.arg)
+			if test.wantErr {
+				assert.NotNil(t, err)
+			} else {
+				assert.Nil(t, err)
+			}
+
+			assert.Equal(t, test.want, message)
+		})
+	}
+}
