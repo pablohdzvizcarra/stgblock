@@ -10,17 +10,20 @@ import (
 const MessageEndChar = 0x0A
 
 func TestDecodeMessage(t *testing.T) {
-	tests := map[string]struct {
+	tests := []struct {
+		name   string
 		input  []byte
 		output protocol.Message
 		fails  bool
 	}{
-		"receive a wrong message with no enough data": {
+		{
+			name:   "receive a wrong message with no enough data",
 			input:  []byte{0},
 			output: protocol.Message{},
 			fails:  true,
 		},
-		"validate message type equals to Write on parse message": {
+		{
+			name:  "validate message type equals to Write on parse message",
 			input: []byte{2, 0, 0, 0, 0, 0},
 			output: protocol.Message{
 				MessageType:    protocol.MessageWrite,
@@ -31,8 +34,8 @@ func TestDecodeMessage(t *testing.T) {
 			},
 			fails: true,
 		},
-		"validate message type equals to Read on parse message": {
-			fails: true,
+		{
+			name:  "validate message type equals to Read on parse message",
 			input: []byte{1, 0, 0, 0, 0, 0, 0},
 			output: protocol.Message{
 				MessageType:    protocol.MessageRead,
@@ -41,9 +44,10 @@ func TestDecodeMessage(t *testing.T) {
 				Size:           0,
 				RawData:        nil,
 			},
-		},
-		"parse correct the filename from the rawData": {
 			fails: true,
+		},
+		{
+			name: "parse correct the filename from the rawData",
 			input: []byte{
 				2,
 				8,
@@ -57,8 +61,10 @@ func TestDecodeMessage(t *testing.T) {
 				Size:           0,
 				RawData:        nil,
 			},
+			fails: true,
 		},
-		"read the size of the message": {
+		{
+			name: "read the size of the message",
 			input: []byte{
 				2,
 				8,
@@ -75,8 +81,8 @@ func TestDecodeMessage(t *testing.T) {
 			},
 			fails: true,
 		},
-		"error if the length of the message not match with the message length": {
-			fails: true,
+		{
+			name: "error if the length of the message not match with the message length",
 			input: []byte{
 				2,
 				8,
@@ -91,9 +97,10 @@ func TestDecodeMessage(t *testing.T) {
 				Size:           6,
 				RawData:        nil,
 			},
+			fails: true,
 		},
-		"parse write message correct": {
-			fails: false,
+		{
+			name: "parse write message correct",
 			input: []byte{
 				2,
 				8,
@@ -109,9 +116,10 @@ func TestDecodeMessage(t *testing.T) {
 				Size:           11,
 				RawData:        []byte{0x48, 0x65, 0x6C, 0x6C, 0x6F, 0x20, 0x57, 0x6F, 0x72, 0x6C, 0x64},
 			},
+			fails: false,
 		},
-		"error when parse read message with not valid filename length": {
-			fails: true,
+		{
+			name: "error when parse read message with not valid filename length",
 			input: []byte{
 				0x01,             // messageType
 				0x03,             // filenameLength
@@ -125,9 +133,10 @@ func TestDecodeMessage(t *testing.T) {
 				RawData:        nil,
 				Size:           0x00,
 			},
-		},
-		"error if filename does not match with the filenameLength": {
 			fails: true,
+		},
+		{
+			name: "error if filename does not match with the filenameLength",
 			input: []byte{
 				0x01,                               // messageType
 				0x08,                               // filenameLength
@@ -141,9 +150,10 @@ func TestDecodeMessage(t *testing.T) {
 				RawData:        nil,
 				Size:           0x00,
 			},
+			fails: true,
 		},
-		"parse read message correct": {
-			fails: false,
+		{
+			name: "parse read message correct",
 			input: []byte{
 				0x01,                                           // messageType
 				0x08,                                           // filenameLength
@@ -157,9 +167,10 @@ func TestDecodeMessage(t *testing.T) {
 				RawData:        nil,
 				Size:           0x00,
 			},
-		},
-		"parse delete message correct": {
 			fails: false,
+		},
+		{
+			name: "parse delete message correct",
 			input: []byte{
 				0x04,                                           // messageType
 				0x08,                                           // filenameLength
@@ -173,9 +184,10 @@ func TestDecodeMessage(t *testing.T) {
 				RawData:        nil,
 				Size:           0x00,
 			},
+			fails: false,
 		},
-		"return error with not valid filename length in Delete message": {
-			fails: true,
+		{
+			name: "return error with not valid filename length in Delete message",
 			input: []byte{
 				0x04,                               // messageType
 				0x06,                               // filenameLength
@@ -185,9 +197,10 @@ func TestDecodeMessage(t *testing.T) {
 			output: protocol.Message{
 				MessageType: protocol.MessageDelete,
 			},
-		},
-		"return error with not valid filename in Delete message": {
 			fails: true,
+		},
+		{
+			name: "return error with not valid filename in Delete message",
 			input: []byte{
 				0x04,                                                 // messageType
 				0x08,                                                 // filenameLength
@@ -199,11 +212,12 @@ func TestDecodeMessage(t *testing.T) {
 				FilenameLength: 0x08,
 				Filename:       "dataa.tx",
 			},
+			fails: true,
 		},
 	}
 
-	for name, test := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
 			message, err := protocol.DecodeMessage(test.input)
 			if test.fails {
 				assert.NotNil(t, err)
@@ -468,6 +482,46 @@ func TestEncodeHandshakeResponse(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			response := protocol.EncodeHandshakeResponse(tt.arg)
 			assert.Equal(t, tt.want, response)
+		})
+	}
+}
+
+func TestDecodeWriteMessage(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  []byte
+		output protocol.Message
+		fails  bool
+	}{
+		{
+			name: "error when write message does not contain end character",
+			input: []byte{
+				byte(protocol.MessageWrite),
+				8,
+				100, 97, 116, 97, 46, 116, 120, 116,
+				0, 0, 0, 0x0B,
+				0x48, 0x65, 0x6C, 0x6C, 0x6F, 0x20, 0x57, 0x6F, 0x72, 0x6C, 0x64,
+			},
+			output: protocol.Message{
+				MessageType:    protocol.MessageWrite,
+				FilenameLength: 8,
+				Filename:       "data.txt",
+				Size:           11,
+			},
+			fails: true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			message, err := protocol.DecodeMessage(test.input)
+			if test.fails {
+				assert.NotNil(t, err)
+			} else {
+				assert.Nil(t, err)
+			}
+
+			assert.Equal(t, test.output, message)
 		})
 	}
 }

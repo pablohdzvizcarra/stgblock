@@ -166,6 +166,16 @@ func decodeWriteMessage(rawData []byte) (Message, error) {
 		}, fmt.Errorf("file size could not be negative")
 	}
 
+	messageEndChar := rawData[len(rawData)-1]
+	if messageEndChar != MessageEndChar {
+		return Message{
+			MessageType:    MessageWrite,
+			FilenameLength: filenameLength,
+			Filename:       filename,
+			Size:           fileSize,
+		}, fmt.Errorf("the write frame does not contains valid end character got=%b, want=%d", messageEndChar, MessageEndChar)
+	}
+
 	// Read the message content from the raw data
 	messageContent := rawData[offset : len(rawData)-1]
 
