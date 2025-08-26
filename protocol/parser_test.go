@@ -273,6 +273,25 @@ func TestCreateClientResponse(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		{
+			name: "create Update response message",
+			args: args{
+				message: protocol.Message{
+					MessageType:    protocol.MessageUpdate,
+					FilenameLength: 8,
+					Filename:       "data.txt",
+					RawData:        []byte{0x48, 0x65, 0x6C, 0x6C, 0x6F, 0x20, 0x57, 0x6F, 0x72, 0x6C, 0x64},
+					Size:           11,
+				},
+			},
+			want: protocol.Response{
+				Status:        protocol.StatusOk,
+				Error:         protocol.NoError,
+				PayloadLength: 11,
+				Payload:       []byte{0x48, 0x65, 0x6C, 0x6C, 0x6F, 0x20, 0x57, 0x6F, 0x72, 0x6C, 0x64},
+			},
+			wantErr: false,
+		},
 	}
 
 	for _, test := range tests {

@@ -330,6 +330,15 @@ func CreateClientResponse(msg Message) (Response, error) {
 		}, nil
 	}
 
+	if msg.MessageType == MessageUpdate {
+		return Response{
+			Status:        StatusOk,
+			Error:         NoError,
+			PayloadLength: msg.Size,
+			Payload:       msg.RawData,
+		}, nil
+	}
+
 	return Response{}, nil
 }
 
