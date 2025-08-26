@@ -7,6 +7,7 @@ type MessageType int
 const (
 	MessageRead   MessageType = 1
 	MessageWrite  MessageType = 2
+	MessageUpdate MessageType = 3
 	MessageDelete MessageType = 4
 )
 

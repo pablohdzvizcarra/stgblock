@@ -33,7 +33,12 @@ func HandleMessage(msg protocol.Message) ([]byte, error) {
 			return nil, fmt.Errorf("error while deleting the file=%s from storage error=%v", msg.Filename, err)
 		}
 		return nil, nil
-
+	case protocol.MessageUpdate:
+		data, err := storage.UpdateFile(msg.Filename, msg.RawData)
+		if err != nil {
+			return nil, fmt.Errorf("error while updating the file=%s error=%v", msg.Filename, err)
+		}
+		return data, nil
 	default:
 		return nil, fmt.Errorf("unknown message type: %v", msg.MessageType)
 	}

@@ -23,6 +23,8 @@ func DecodeMessage(rawData []byte) (Message, error) {
 		return decodeReadMessage(rawData)
 	case 2:
 		return decodeWriteMessage(rawData)
+	case 3:
+		return decodeUpdateMessage(rawData)
 	case 4:
 		return decodeDeleteMessage(rawData)
 	default:
@@ -30,8 +32,113 @@ func DecodeMessage(rawData []byte) (Message, error) {
 	}
 }
 
+// decodeUpdateMessage decodes a raw byte slice into a structured Message object
+// representing an "Update" message. It performs various validations to ensure
+// the integrity of the data and prevent buffer overflows or underflows.
+//
+// Parameters:
+//   - rawData: A byte slice containing the raw data to decode.
+//
+// Returns:
+//   - Message: A structured representation of the decoded message.
+//   - error: An error if the decoding or validation fails.
+//
+// Validation Steps:
+//  1. Reads and validates the filename length to ensure it meets the minimum
+//     required length (MIN_FILENAME_LENGTH).
+//  2. Ensures the filename length does not exceed the available data to avoid
+//     buffer underflow.
+//  3. Extracts and validates the filename to ensure it is not empty.
+//  4. Reads and validates the file size to ensure it is greater than zero.
+//  5. Validates the presence of a valid end character (MessageEndChar) in the
+//     raw data.
+//  6. Ensures the message content length matches the specified file size to
+//     prevent byte overflow vulnerabilities.
+//
+// Errors:
+//   - Returns an error if any of the above validations fail, with details about
+//     the specific issue encountered.
+func decodeUpdateMessage(rawData []byte) (Message, error) {
+	slog.Info("Decoding a Update message from the client request", "byteLength", len(rawData))
+	var offset = 1
+
+	// read the filename length
+	filenameLen := int(rawData[offset])
+	offset += 1
+
+	if filenameLen < MIN_FILENAME_LENGTH {
+		return Message{
+			MessageType: MessageUpdate,
+		}, fmt.Errorf("invalid filenameLength=%d, filename length needs to be > 8 bytes", filenameLen)
+	}
+
+	// validates byte to avoid buffer underflow
+	if offset+filenameLen > len(rawData)-1 {
+		return Message{
+			MessageType:    MessageUpdate,
+			FilenameLength: filenameLen,
+		}, fmt.Errorf("filename size (%d) exceeds available data (%d)", filenameLen, len(rawData)-offset-2)
+	}
+
+	// get the filename
+	filename := string(rawData[offset : offset+filenameLen])
+	offset += filenameLen
+
+	if filename == "" {
+		return Message{
+			MessageType:    MessageUpdate,
+			FilenameLength: filenameLen,
+			Filename:       string(filename),
+		}, fmt.Errorf("the filename cannot be empty")
+	}
+
+	fileSizeChunk := rawData[offset : offset+4]
+	fileSize := binary.BigEndian.Uint32(fileSizeChunk)
+	offset += 4
+
+	if fileSize < 1 {
+		return Message{
+			MessageType:    MessageUpdate,
+			FilenameLength: filenameLen,
+			Filename:       filename,
+			Size:           fileSize,
+		}, fmt.Errorf("file size could not be negative")
+	}
+
+	messageEndChar := rawData[len(rawData)-1]
+	if messageEndChar != MessageEndChar {
+		return Message{
+			MessageType:    MessageUpdate,
+			FilenameLength: filenameLen,
+			Filename:       filename,
+			Size:           fileSize,
+		}, fmt.Errorf("the update frame does not contain a valid end character got=%b, want=%d", messageEndChar, MessageEndChar)
+	}
+
+	// Read the message content from the raw data
+	messageContent := rawData[offset : len(rawData)-1]
+
+	// With this validation we are avoiding byte overflow vulnerability
+	if uint32(len(messageContent)) != fileSize {
+		return Message{
+			MessageType:    MessageUpdate,
+			FilenameLength: filenameLen,
+			Filename:       filename,
+			Size:           fileSize,
+		}, fmt.Errorf("the message content not match with the length")
+	}
+
+	return Message{
+		MessageType:    MessageUpdate,
+		FilenameLength: filenameLen,
+		Filename:       filename,
+		Size:           fileSize,
+		RawData:        messageContent,
+	}, nil
+}
+
 func decodeDeleteMessage(rawData []byte) (Message, error) {
-	slog.Info("Decoding a Delete message from the client request", "bytesLength=", len(rawData))
+	slog.Info("Decoding a Delete message from the client request", "bytesLength", len(rawData))
 	var offset = 1
 
 	// read the filename length
@@ -220,6 +327,15 @@ func CreateClientResponse(msg Message) (Response, error) {
 			Error:         NoError,
 			PayloadLength: 0,
 			Payload:       nil,
+		}, nil
+	}
+
+	if msg.MessageType == MessageUpdate {
+		return Response{
+			Status:        StatusOk,
+			Error:         NoError,
+			PayloadLength: msg.Size,
+			Payload:       msg.RawData,
 		}, nil
 	}
 
