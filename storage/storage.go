@@ -152,7 +152,7 @@ func ReadFile(filename string) ([]byte, error) {
 	return fullFile, nil
 }
 
-func UpdateFile(filename string) ([]byte, error) {
+func UpdateFile(filename string, data []byte) ([]byte, error) {
 	slog.Info("Updating the chunks for", "file", filename)
 	blocksDir, _ := resolvePaths()
 
@@ -195,7 +195,21 @@ func UpdateFile(filename string) ([]byte, error) {
 	wg.Wait()
 	slog.Info("all blocks deleted for", "file", filename)
 
-	return nil, nil
+	// Remove block entry in metadata
+	metadataMutex.Lock()
+	delete(meta, filename)
+	err = updateMetadata(meta, filename)
+	if err != nil {
+		metadataMutex.Unlock()
+		slog.Info("The file to delete does not exists on disk or an error happens", "file", filename)
+		return nil, fmt.Errorf("failed to update metadata for file %s: %v", filename, err)
+	}
+	metadataMutex.Unlock()
+
+	// WRITE the file into disk
+	err = WriteFile(filename, data)
+
+	return data, err
 }
 
 func saveMetadata(filename string, blockIDs []string) error {
