@@ -108,11 +108,11 @@ func decodeUpdateMessage(rawData []byte) (Message, error) {
 	messageEndChar := rawData[len(rawData)-1]
 	if messageEndChar != MessageEndChar {
 		return Message{
-			MessageType:    MessageWrite,
+			MessageType:    MessageUpdate,
 			FilenameLength: filenameLen,
 			Filename:       filename,
 			Size:           fileSize,
-		}, fmt.Errorf("the write frame does not contains valid end character got=%b, want=%d", messageEndChar, MessageEndChar)
+		}, fmt.Errorf("the update frame does not contain a valid end character got=%b, want=%d", messageEndChar, MessageEndChar)
 	}
 
 	// Read the message content from the raw data
@@ -121,7 +121,7 @@ func decodeUpdateMessage(rawData []byte) (Message, error) {
 	// With this validation we are avoiding byte overflow vulnerability
 	if uint32(len(messageContent)) != fileSize {
 		return Message{
-			MessageType:    MessageWrite,
+			MessageType:    MessageUpdate,
 			FilenameLength: filenameLen,
 			Filename:       filename,
 			Size:           fileSize,

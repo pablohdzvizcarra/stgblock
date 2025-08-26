@@ -51,7 +51,7 @@ func TestDeleteFile(t *testing.T) {
 
 func TestUpdateFile(t *testing.T) {
 	// =========================================================
-	// Write the file before delete it
+	// Write the file before deleting it
 	err := WriteFile("data.txt", []byte{0x65, 0x78, 0x61, 0x6D, 0x70, 0x6C, 0x65, 0x20, 0x72, 0x65, 0x70, 0x6F, 0x72, 0x74})
 	if err != nil {
 		panic(err)
