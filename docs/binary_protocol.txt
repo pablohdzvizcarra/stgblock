@@ -188,6 +188,15 @@ filename
 endChar
 - 1 byte indicating the end of the message (0x0A - \n).
 
+DELETE RESPONSE MESSAGE
+------------------------------------------------------------
+
+the client response have the following format:
+
+- [statusCode(1 byte)]
+- [errorCode (2 bytes)]
+- [payloadLength (4 bytes)]
+- [endChar (1 byte)]
 
 ========================================================================================
 UPDATE MESSAGE FROM CLIENT
