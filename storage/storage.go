@@ -152,6 +152,52 @@ func ReadFile(filename string) ([]byte, error) {
 	return fullFile, nil
 }
 
+func UpdateFile(filename string) ([]byte, error) {
+	slog.Info("Updating the chunks for", "file", filename)
+	blocksDir, _ := resolvePaths()
+
+	// load the metadata to know the blocks location
+	metadataMutex.Lock()
+	meta, err := loadMetadata()
+	if err != nil {
+		metadataMutex.Unlock()
+		slog.Error("an error occurred when reading the metadata", "error", err)
+		return nil, fmt.Errorf("an error occurred when reading the metadata error=%v", err)
+	}
+
+	fileIDs, exists := meta[filename]
+	if !exists {
+		metadataMutex.Unlock()
+		slog.Error("the file entry not exists on the metadata", "file", filename)
+		return nil, fmt.Errorf("the file=%s entry not exists on the metadata", filename)
+	}
+
+	metadataMutex.Unlock()
+
+	// Remove the file
+	slog.Info("Removing blocks for file", "fileID", filename, "numberChunks", len(fileIDs))
+	var wg sync.WaitGroup
+
+	for _, value := range fileIDs {
+		blockPath := filepath.Join(blocksDir, value)
+
+		wg.Add(1)
+
+		go func(path string) {
+			defer wg.Done()
+			slog.Info("Removing block on disk", "blockId", blockPath)
+			if err := os.Remove(path); err != nil {
+				slog.Error("Error deleting block on disk", "block", path)
+			}
+		}(blockPath)
+	}
+
+	wg.Wait()
+	slog.Info("all blocks deleted for", "file", filename)
+
+	return nil, nil
+}
+
 func saveMetadata(filename string, blockIDs []string) error {
 	slog.Info("Attempting to update metadata for file", "file", filename)
 	metadataMutex.Lock()

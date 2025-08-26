@@ -32,6 +32,32 @@ func DecodeMessage(rawData []byte) (Message, error) {
 	}
 }
 
+// decodeUpdateMessage decodes a raw byte slice into a structured Message object
+// representing an "Update" message. It performs various validations to ensure
+// the integrity of the data and prevent buffer overflows or underflows.
+//
+// Parameters:
+//   - rawData: A byte slice containing the raw data to decode.
+//
+// Returns:
+//   - Message: A structured representation of the decoded message.
+//   - error: An error if the decoding or validation fails.
+//
+// Validation Steps:
+//  1. Reads and validates the filename length to ensure it meets the minimum
+//     required length (MIN_FILENAME_LENGTH).
+//  2. Ensures the filename length does not exceed the available data to avoid
+//     buffer underflow.
+//  3. Extracts and validates the filename to ensure it is not empty.
+//  4. Reads and validates the file size to ensure it is greater than zero.
+//  5. Validates the presence of a valid end character (MessageEndChar) in the
+//     raw data.
+//  6. Ensures the message content length matches the specified file size to
+//     prevent byte overflow vulnerabilities.
+//
+// Errors:
+//   - Returns an error if any of the above validations fail, with details about
+//     the specific issue encountered.
 func decodeUpdateMessage(rawData []byte) (Message, error) {
 	slog.Info("Decoding a Update message from the client request", "byteLength", len(rawData))
 	var offset = 1
