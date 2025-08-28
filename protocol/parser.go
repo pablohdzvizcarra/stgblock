@@ -102,7 +102,7 @@ func decodeUpdateMessage(rawData []byte) (Message, error) {
 			FilenameLength: filenameLen,
 			Filename:       filename,
 			Size:           fileSize,
-		}, fmt.Errorf("file size could not be negative")
+		}, fmt.Errorf("file size must be > 0")
 	}
 
 	messageEndChar := rawData[len(rawData)-1]
@@ -270,7 +270,7 @@ func decodeWriteMessage(rawData []byte) (Message, error) {
 			FilenameLength: filenameLength,
 			Filename:       filename,
 			Size:           fileSize,
-		}, fmt.Errorf("file size could not be negative")
+		}, fmt.Errorf("file size must be > 0")
 	}
 
 	messageEndChar := rawData[len(rawData)-1]
