@@ -71,20 +71,33 @@ func handleClientConnection(conn net.Conn) {
 	mp := &processor.DefaultMessageProcessor{}
 	header := make([]byte, 4)
 	for {
-		if _, err := io.ReadFull(conn, header); err != nil {
-			slog.Info("Header messages could not be received by the client")
+		n, err := io.ReadFull(conn, header)
+		if err != nil {
+			if err.Error() == "EOF" {
+				slog.Info("Client disconnected", "client", client.ID, "address", conn.RemoteAddr())
+				break
+			}
+			slog.Info("Header messages could not be received", "client", client.ID)
 			break
 		}
+
+		slog.Info("Reading header message", "client", client.ID, "totalHeaderBytes", n)
 
 		// message length can be up to 4096 bytes
 		msgLength := binary.BigEndian.Uint32(header)
 
 		// reading the exact number of bytes for the message payload
 		payload := make([]byte, msgLength)
-		if _, err := io.ReadFull(conn, payload); err != nil {
-			slog.Error("A problem occurred while reading the payload from the client", "bytes", msgLength)
+		n, err = io.ReadFull(conn, payload)
+		if err != nil {
+			if err.Error() == "EOF" {
+				slog.Info("Client disconnected", "client", client.ID, "address", conn.RemoteAddr())
+				break
+			}
+			slog.Error("A problem occurred while reading the payload", "client", client.ID, "payloadLength", msgLength)
 			break
 		}
+		slog.Info("Success message payload read", "client", client.ID, "bytesRead", n)
 
 		// message, err := reader.ReadBytes('\n')
 		// if err != nil {
