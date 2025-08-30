@@ -107,7 +107,6 @@ func TestDecodeMessage(t *testing.T) {
 				100, 97, 116, 97, 46, 116, 120, 116,
 				0, 0, 0, 0x0B,
 				0x48, 0x65, 0x6C, 0x6C, 0x6F, 0x20, 0x57, 0x6F, 0x72, 0x6C, 0x64,
-				MessageEndChar,
 			},
 			output: protocol.Message{
 				MessageType:    protocol.MessageWrite,
@@ -530,7 +529,7 @@ func TestDecodeWriteMessage(t *testing.T) {
 			fails: true,
 		},
 		{
-			name: "parse a write message correct",
+			name: "parse write message correct",
 			input: []byte{
 				byte(protocol.MessageWrite),                    // messageType 1 byte
 				8,                                              // filename length 1 byte
