@@ -97,19 +97,8 @@ func handleClientConnection(conn net.Conn) {
 			slog.Error("A problem occurred while reading the payload", "client", client.ID, "payloadLength", msgLength)
 			break
 		}
-		slog.Info("Success message payload read", "client", client.ID, "bytesRead", n)
 
-		// message, err := reader.ReadBytes('\n')
-		// if err != nil {
-		// 	if err.Error() == "EOF" {
-		// 		slog.Info("Client disconnected", "client", client.ID, "address", conn.RemoteAddr())
-		// 		break
-		// 	}
-		// 	slog.Error("Error reading data", "client", client.ID, "error", err)
-		// 	break
-		// }
-
-		slog.Info("Receiving data", "client", client.ID, "bytes", len(payload))
+		slog.Info("Receiving data", "client", client.ID, "bytesLength", n, "payloadLength", len(payload))
 
 		response, err := mp.Process(payload, client)
 		if err != nil {
