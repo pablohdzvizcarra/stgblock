@@ -513,23 +513,6 @@ func TestDecodeWriteMessage(t *testing.T) {
 		fails  bool
 	}{
 		{
-			name: "error when write message does not contain end character",
-			input: []byte{
-				byte(protocol.MessageWrite),
-				8,
-				100, 97, 116, 97, 46, 116, 120, 116,
-				0, 0, 0, 0x0B,
-				0x48, 0x65, 0x6C, 0x6C, 0x6F, 0x20, 0x57, 0x6F, 0x72, 0x6C, 0x64,
-			},
-			output: protocol.Message{
-				MessageType:    protocol.MessageWrite,
-				FilenameLength: 8,
-				Filename:       "data.txt",
-				Size:           11,
-			},
-			fails: true,
-		},
-		{
 			name: "error when file size is zero",
 			input: []byte{
 				byte(protocol.MessageWrite),
@@ -545,6 +528,24 @@ func TestDecodeWriteMessage(t *testing.T) {
 				Size:           0,
 			},
 			fails: true,
+		},
+		{
+			name: "parse a write message correct",
+			input: []byte{
+				byte(protocol.MessageWrite),                    // messageType 1 byte
+				8,                                              // filename length 1 byte
+				0x64, 0x61, 0x74, 0x61, 0x2E, 0x74, 0x78, 0x74, // filename
+				0x00, 0x00, 0x0, 0x0C, // message size 4 bytes
+				0x68, 0x65, 0x6C, 0x6C, 0x6F, 0x20, 0x77, 0x6F, 0x72, 0x6C, 0x64, 0x21, // payload
+			},
+			output: protocol.Message{
+				MessageType:    protocol.MessageWrite,
+				FilenameLength: 8,
+				Filename:       "data.txt",
+				Size:           12,
+				RawData:        []byte{0x68, 0x65, 0x6C, 0x6C, 0x6F, 0x20, 0x77, 0x6F, 0x72, 0x6C, 0x64, 0x21},
+			},
+			fails: false,
 		},
 	}
 

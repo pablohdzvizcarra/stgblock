@@ -273,18 +273,8 @@ func decodeWriteMessage(rawData []byte) (Message, error) {
 		}, fmt.Errorf("file size must be > 0")
 	}
 
-	messageEndChar := rawData[len(rawData)-1]
-	if messageEndChar != MessageEndChar {
-		return Message{
-			MessageType:    MessageWrite,
-			FilenameLength: filenameLength,
-			Filename:       filename,
-			Size:           fileSize,
-		}, fmt.Errorf("the write frame does not contains valid end character got=%b, want=%d", messageEndChar, MessageEndChar)
-	}
-
 	// Read the message content from the raw data
-	messageContent := rawData[offset : len(rawData)-1]
+	messageContent := rawData[offset:]
 
 	// With this validation we are avoiding byte overflow vulnerability
 	if uint32(len(messageContent)) != fileSize {
