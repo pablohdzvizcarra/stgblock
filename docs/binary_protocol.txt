@@ -95,7 +95,6 @@ Format of a WRITE message request sent by the client:
 - [filename (filenameLength bytes)]
 - [size 4 bytes]
 - [rawData (size bytes)]
-- [endChar 1 byte]
 
 
 ------------------

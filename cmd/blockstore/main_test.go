@@ -2,9 +2,11 @@ package main
 
 import (
 	"bufio"
+	"encoding/binary"
 	"fmt"
 	"log/slog"
 	"net"
+	"os"
 	"testing"
 	"time"
 
@@ -260,6 +262,96 @@ func TestSendWriteMessage(t *testing.T) {
 			assert.Equal(t, tt.want, resp)
 		})
 	}
+}
+
+func TestSaveBigFileWriteMessage(t *testing.T) {
+	// =================== Start the main application server for testing ===================
+	listener, err := server.StartApplication()
+	if err != nil {
+		t.Fatalf("failed to start the application: %v", err)
+	}
+	defer listener.Close()
+
+	// Allow the server a moment to start
+	time.Sleep(100 * time.Millisecond)
+	// =====================================================================================
+
+	// Create the client to send messages to the application
+	conn, err := startTestTCPClient()
+	if err != nil {
+		t.FailNow()
+	}
+	defer conn.Close()
+
+	// Perform handshake before sending the WRITE message
+	handshakeMessage := []byte{
+		0x53, 0x54, 0x47, // magic protocol number
+		0x01,                                           // protocol version
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // reserved bytes
+		0x04,                   // client id length
+		0x44, 0x4F, 0x39, 0x31, // client id
+		0x0A, // endChar
+	}
+	_, err = conn.Write(handshakeMessage)
+	if err != nil {
+		t.Fatalf("failed to send handshake message: %v", err)
+	}
+
+	_ = conn.SetReadDeadline(time.Now().Add(2 * time.Second)) // avoid hanging if no '\n'
+	reader := bufio.NewReader(conn)
+	_, err = reader.ReadBytes('\n') // Read handshake response
+	if err != nil {
+		t.Fatalf("failed to read handshake response: %v", err)
+	}
+
+	// ===================== End handshake message ============================================
+
+	data, err := os.ReadFile("/Users/pablohernadez/Documents/GitHub/stgblock/data/customers_500_000.csv")
+	if err != nil {
+		t.Fatalf("an error occurred while reading the file error=%v", err)
+	}
+	filename := []byte{0x65, 0x78, 0x61, 0x6D, 0x70, 0x6C, 0x65, 0x2E, 0x63, 0x73, 0x76}
+	payloadLen := make([]byte, 4)
+	binary.BigEndian.PutUint32(payloadLen, uint32(len(data)))
+	messageLen := 1 + 1 + len(filename) + 4 + len(data)
+
+	// prepare write message
+	writeMsg := make([]byte, 0, messageLen)
+	writeMsg = append(writeMsg, 0x02)
+	writeMsg = append(writeMsg, byte(len(filename)))
+	writeMsg = append(writeMsg, filename...)
+	writeMsg = append(writeMsg, payloadLen...)
+	writeMsg = append(writeMsg, data...)
+
+	// prepare header message
+	headerMsg := make([]byte, 4)
+	binary.BigEndian.PutUint32(headerMsg, uint32(messageLen))
+
+	expectedWriteResp := []byte{
+		0x00,       // statusCode
+		0x00, 0x00, // errorCode
+		0x00, 0x00, 0x00, 0x00, // payload length
+		0x0A, // end character
+	}
+
+	// Send header message
+	_, err = conn.Write(headerMsg)
+	if err != nil {
+		t.Fatal("failed to write to the server")
+	}
+	assert.Nil(t, err)
+
+	// Send write message
+	_, err = conn.Write(writeMsg)
+	if err != nil {
+		t.Fatalf("filed when send write message to server error=%v", err)
+	}
+
+	_ = conn.SetReadDeadline(time.Now().Add(2 * time.Second)) // avoid hanging if no '\n'
+	resp, err := reader.ReadBytes('\n')
+
+	assert.Nil(t, err)
+	assert.Equal(t, expectedWriteResp, resp)
 }
 
 // func TestSendReadMessage(t *testing.T) {
