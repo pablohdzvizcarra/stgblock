@@ -3,7 +3,9 @@ package server
 import (
 	"bufio"
 	"crypto/rand"
+	"encoding/binary"
 	"encoding/hex"
+	"io"
 	"log/slog"
 	"net"
 	"time"
@@ -67,20 +69,40 @@ func handleClientConnection(conn net.Conn) {
 	defer clients.Remove(client.ID)
 
 	mp := &processor.DefaultMessageProcessor{}
+	header := make([]byte, 4)
 	for {
-		message, err := reader.ReadBytes('\n')
+		// First read the header bytes
+		n, err := io.ReadFull(conn, header)
 		if err != nil {
 			if err.Error() == "EOF" {
 				slog.Info("Client disconnected", "client", client.ID, "address", conn.RemoteAddr())
 				break
 			}
-			slog.Error("Error reading data", "client", client.ID, "error", err)
+			slog.Info("Header messages could not be received", "client", client.ID)
 			break
 		}
 
-		slog.Info("Receiving data", "client", client.ID, "bytes", len(message))
+		slog.Info("Reading header message", "client", client.ID, "totalHeaderBytes", n)
 
-		response, err := mp.Process(message, client)
+		// message length can be up to 4096 MiB
+		msgLength := binary.BigEndian.Uint32(header)
+
+		// Second read the message payload
+		// reading the exact number of bytes for the message payload
+		payload := make([]byte, msgLength)
+		n, err = io.ReadFull(conn, payload)
+		if err != nil {
+			if err.Error() == "EOF" {
+				slog.Info("Client disconnected", "client", client.ID, "address", conn.RemoteAddr())
+				break
+			}
+			slog.Error("A problem occurred while reading the payload", "client", client.ID, "payloadLength", msgLength, "error", err)
+			break
+		}
+
+		slog.Info("Receiving data", "client", client.ID, "bytesLength", n, "payloadLength", len(payload))
+
+		response, err := mp.Process(payload, client)
 		if err != nil {
 			slog.Error("Error processing message", "client", client.ID, "error", err)
 			// In a future iteration, send an error response back to the client
