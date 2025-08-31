@@ -327,11 +327,10 @@ func TestSaveBigFileWriteMessage(t *testing.T) {
 	headerMsg := make([]byte, 4)
 	binary.BigEndian.PutUint32(headerMsg, uint32(messageLen))
 
-	expectedWriteResp := []byte{
+	expectedHeaderResp := []byte{
 		0x00,       // statusCode
 		0x00, 0x00, // errorCode
 		0x00, 0x00, 0x00, 0x00, // payload length
-		0x0A, // end character
 	}
 
 	// Send header message
@@ -348,10 +347,10 @@ func TestSaveBigFileWriteMessage(t *testing.T) {
 	}
 
 	_ = conn.SetReadDeadline(time.Now().Add(2 * time.Second)) // avoid hanging if no '\n'
-	resp, err := reader.ReadBytes('\n')
+	headerResp, err := reader.ReadBytes(7)
 
 	assert.Nil(t, err)
-	assert.Equal(t, expectedWriteResp, resp)
+	assert.Equal(t, expectedHeaderResp, headerResp)
 }
 
 // func TestSendReadMessage(t *testing.T) {
