@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/binary"
 	"fmt"
+	"io"
 	"log/slog"
 	"net"
 	"os"
@@ -226,7 +227,6 @@ func TestSendWriteMessage(t *testing.T) {
 				0x00,       // statusCode
 				0x00, 0x00, // errorCode
 				0x00, 0x00, 0x00, 0x00, // payload length
-				0x0A, // end character
 			},
 			wantErr: false,
 		},
@@ -234,7 +234,7 @@ func TestSendWriteMessage(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Send payload length in header
+			// Send header information to server
 			_, err = conn.Write(tt.args.payloadLength)
 			if err != nil {
 				t.Fatal("failed to write to the server")
@@ -245,7 +245,7 @@ func TestSendWriteMessage(t *testing.T) {
 				assert.Nil(t, err)
 			}
 
-			// Send payload
+			// Send payload to server
 			_, err = conn.Write(tt.args.payload)
 			if err != nil {
 				t.Fatal("failed to write to the server")
@@ -256,10 +256,14 @@ func TestSendWriteMessage(t *testing.T) {
 				assert.Nil(t, err)
 			}
 
-			_ = conn.SetReadDeadline(time.Now().Add(2 * time.Second)) // avoid hanging if no '\n'
-			resp, err := reader.ReadBytes('\n')
+			_ = conn.SetReadDeadline(time.Now().Add(2 * time.Second))
+
+			// Read header client response
+			headerResp := make([]byte, 7)
+			_, err := io.ReadFull(reader, headerResp)
+
 			assert.Nil(t, err)
-			assert.Equal(t, tt.want, resp)
+			assert.Equal(t, tt.want, headerResp)
 		})
 	}
 }
