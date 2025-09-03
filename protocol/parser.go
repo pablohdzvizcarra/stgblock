@@ -337,7 +337,7 @@ func CreateClientResponse(msg Message) (Response, error) {
 // Parameters:
 //   - msg: the response message
 //   - error: if an error happens when creating the binary message response.
-func EncodeResponseMessage(msg Response) ([]byte, []byte, error) {
+func EncodeResponseMessage(msg Response) ([]byte, int, error) {
 	slog.Info("Encoding a response message into bytes", "status", msg.Status, "payloadLength", msg.PayloadLength)
 	// Read the status (byte 0)
 	status := byte(msg.Status)
@@ -348,21 +348,18 @@ func EncodeResponseMessage(msg Response) ([]byte, []byte, error) {
 	// Read the payload length (bytes 3-6)
 	payloadLength := uint32(msg.PayloadLength)
 
-	// Read the payload (bytes 7-n)
-	var payload []byte
-	if payloadLength == 0 {
-		payload = nil
-	} else {
-		payload = msg.Payload
-	}
-
 	// build the response message
-	response := make([]byte, 7)
+	response := make([]byte, 7+payloadLength)
 	response[0] = status
 	binary.BigEndian.PutUint16(response[1:3], errorCode)
 	binary.BigEndian.PutUint32(response[3:7], payloadLength)
 
-	return response, payload, nil
+	// Read payload bytes (7-n) if exists
+	if payloadLength > 0 {
+		copy(response[7:], msg.Payload)
+	}
+
+	return response, len(response), nil
 }
 
 func DecodeHandshakeRequest(b []byte) (HandshakeRequest, error) {

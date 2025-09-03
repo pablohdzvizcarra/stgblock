@@ -309,7 +309,7 @@ import (
 
 func TestEncodeResponseMessage(t *testing.T) {
 	type Want struct {
-		header  []byte
+		header  int
 		payload []byte
 	}
 
@@ -328,8 +328,8 @@ func TestEncodeResponseMessage(t *testing.T) {
 				Payload:       nil,
 			},
 			want: Want{
-				header:  []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
-				payload: nil,
+				header:  7,
+				payload: []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
 			},
 			wantErr: false,
 		},
@@ -342,8 +342,13 @@ func TestEncodeResponseMessage(t *testing.T) {
 				Payload:       []byte{0x48, 0x65, 0x6C, 0x6C, 0x6F, 0x20, 0x57, 0x6F, 0x72, 0x6C, 0x64},
 			},
 			want: Want{
-				header:  []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0B},
-				payload: []byte{0x48, 0x65, 0x6C, 0x6C, 0x6F, 0x20, 0x57, 0x6F, 0x72, 0x6C, 0x64},
+				header: 18,
+				payload: []byte{
+					0x00,       // statusCode
+					0x00, 0x00, // errorCode
+					0x00, 0x00, 0x00, 0x0B, // payload length
+					0x48, 0x65, 0x6C, 0x6C, 0x6F, 0x20, 0x57, 0x6F, 0x72, 0x6C, 0x64, // payload
+				},
 			},
 			wantErr: false,
 		},
@@ -351,13 +356,13 @@ func TestEncodeResponseMessage(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			header, payload, err := protocol.EncodeResponseMessage(tt.arg)
+			response, header, err := protocol.EncodeResponseMessage(tt.arg)
 			if tt.wantErr {
 				assert.NotNil(t, err)
 			} else {
 				assert.Nil(t, err)
 				assert.Equal(t, tt.want.header, header)
-				assert.Equal(t, tt.want.payload, payload)
+				assert.Equal(t, tt.want.payload, response)
 			}
 		})
 	}
