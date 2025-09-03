@@ -126,14 +126,19 @@ endChar
 
 CLIENT RESPONSES
 ------------------------------------------------------------
-The client responses have the following format:
+
+HEADER CLIENT RESPONSE
+-----------------------
+
+The header client response have the following format:
 
 - [statusCode(1 byte)] 
 - [errorCode (2 bytes)]
 - [payloadLength (4 bytes)]
 - [payload (payloadLength bytes)]
 
-Client response is composed for 7 header bytes and the payload, if the payload length is 0, the payload is empty.
+Client response is composed for 7 header bytes, if the payload length is 0, the payload is empty
+and clients must not receive any additional bytes
 
 -------------------
 Status Codes:
@@ -150,10 +155,12 @@ Error Codes:
 Payload Length
 - uint32 4 bytes representing the length of the payload in bytes.
 
--------------------
-Payload
-- if statusCode == 0x00, this is the "successful" data (e.g. the block's bytes on a READ)
-- if statusCode == 0x01, this is an ASCII or UTF-8 error message string.
+PAYLOAD RESPONSE
+-----------------------
+
+If the payloadLength > 0, the payload is sent after the header
+
+- [payload (payloadLength bytes)]
 
 ========================================================================================
 READ MESSAGES FROM CLIENT

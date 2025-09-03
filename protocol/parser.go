@@ -337,12 +337,12 @@ func CreateClientResponse(msg Message) (Response, error) {
 // Parameters:
 //   - msg: the response message
 //   - error: if an error happens when creating the binary message response.
-func EncodeResponseMessage(msg Response) ([]byte, error) {
+func EncodeResponseMessage(msg Response) ([]byte, []byte, error) {
 	slog.Info("Encoding a response message into bytes", "status", msg.Status, "payloadLength", msg.PayloadLength)
 	// Read the status (byte 0)
 	status := byte(msg.Status)
 
-	// Read the error code (byte 1-2)
+	// Read the error code (bytes 1-2)
 	errorCode := uint16(msg.Error)
 
 	// Read the payload length (bytes 3-6)
@@ -357,18 +357,12 @@ func EncodeResponseMessage(msg Response) ([]byte, error) {
 	}
 
 	// build the response message
-	response := make([]byte, 7+len(payload)+1)
+	response := make([]byte, 7)
 	response[0] = status
 	binary.BigEndian.PutUint16(response[1:3], errorCode)
 	binary.BigEndian.PutUint32(response[3:7], payloadLength)
-	if payload != nil {
-		copy(response[7:], payload)
-	}
 
-	// The client uses a newline character to identify the end of the message 0x0A
-	response[len(response)-1] = MessageEndChar
-
-	return response, nil
+	return response, payload, nil
 }
 
 func DecodeHandshakeRequest(b []byte) (HandshakeRequest, error) {

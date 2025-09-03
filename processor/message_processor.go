@@ -49,7 +49,7 @@ func (d *DefaultMessageProcessor) Process(message []byte, client *client.Client)
 	}
 
 	slog.Info("Encoding the client message response into protocol format", "client", client.ID)
-	rawResponse, err := protocol.EncodeResponseMessage(response)
+	rawResponse, _, err := protocol.EncodeResponseMessage(response)
 	if err != nil {
 		slog.Error("Error encoding response", "client", client.ID, "error", err)
 		return nil, err
