@@ -71,7 +71,7 @@ func handleClientConnection(conn net.Conn) {
 	mp := &processor.DefaultMessageProcessor{}
 	header := make([]byte, 4)
 	for {
-		// First read the header bytes
+		// ================== Read client request header
 		n, err := io.ReadFull(conn, header)
 		if err != nil {
 			if err.Error() == "EOF" {
@@ -90,6 +90,7 @@ func handleClientConnection(conn net.Conn) {
 		// Second read the message payload
 		// reading the exact number of bytes for the message payload
 		payload := make([]byte, msgLength)
+		// ================== Read client request body
 		n, err = io.ReadFull(conn, payload)
 		if err != nil {
 			if err.Error() == "EOF" {
@@ -115,11 +116,14 @@ func handleClientConnection(conn net.Conn) {
 		slog.Info("Sending a client header message", "client", client.ID, "headerSize", header)
 		headerBytes := make([]byte, 4)
 		binary.BigEndian.PutUint32(headerBytes, uint32(header))
+
+		// ================== Write header server to client
 		if _, err = conn.Write(headerBytes); err != nil {
 			slog.Error("Error sending the client header", "client", client.ID, "error", err)
 		}
 
 		slog.Info("Sending a message response", "client", client.ID, "responseBytesLength", len(response))
+		// ================== Write response server to client
 		if _, err = conn.Write(response); err != nil {
 			slog.Error("Error writing response", "client", client.ID, "error", err)
 		}
