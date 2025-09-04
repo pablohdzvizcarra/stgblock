@@ -102,13 +102,24 @@ func handleClientConnection(conn net.Conn) {
 
 		slog.Info("Receiving data", "client", client.ID, "bytesLength", n, "payloadLength", len(payload))
 
-		response, err := mp.Process(payload, client)
+		response, header, err := mp.Process(payload, client)
 		if err != nil {
 			slog.Error("Error processing message", "client", client.ID, "error", err)
 			// In a future iteration, send an error response back to the client
 		}
 
-		slog.Info("Sending a message response", "client", client.ID, "byteSize", len(response))
+		if header < 0 {
+			// TODO: send a client message error indicating the header could not be empty and something wrongs happened
+		}
+
+		slog.Info("Sending a client header message", "client", client.ID, "headerSize", header)
+		headerBytes := make([]byte, 4)
+		binary.BigEndian.PutUint32(headerBytes, uint32(header))
+		if _, err = conn.Write(headerBytes); err != nil {
+			slog.Error("Error sending the client header", "client", client.ID, "error", err)
+		}
+
+		slog.Info("Sending a message response", "client", client.ID, "responseBytesLength", len(response))
 		if _, err = conn.Write(response); err != nil {
 			slog.Error("Error writing response", "client", client.ID, "error", err)
 		}
