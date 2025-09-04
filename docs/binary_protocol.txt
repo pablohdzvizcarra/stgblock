@@ -170,8 +170,6 @@ Format of the READ message request sent by a client:
 - [messageType 1 byte]
 - [filenameLength 1 byte]
 - [filename (filenameLength bytes)]
-- [endChar 1 byte]
-
 
 -------------------
 messageType

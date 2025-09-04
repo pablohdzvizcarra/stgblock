@@ -181,6 +181,28 @@ func decodeDeleteMessage(rawData []byte) (Message, error) {
 	}, nil
 }
 
+// decodeReadMessage decodes a "Read" message from the provided raw byte slice.
+// It extracts the filename length and the filename from the raw data, ensuring
+// that the data is valid and complete.
+//
+// Parameters:
+//   - rawData: A byte slice containing the raw data to decode.
+//
+// Returns:
+//   - Message: A struct containing the decoded message details, including the
+//     message type, filename length, and filename.
+//   - error: An error if the decoding fails due to invalid or incomplete data.
+//
+// Errors:
+//   - Returns an error if the filename length is less than 8 bytes.
+//   - Returns an error if the rawData does not contain enough bytes for the filename.
+//
+// Example:
+//
+//	message, err := decodeReadMessage(rawData)
+//	if err != nil {
+//	    log.Fatalf("Failed to decode message: %v", err)
+//	}
 func decodeReadMessage(rawData []byte) (Message, error) {
 	slog.Info("Decoding a Read message from the client request")
 	var offset = 1
