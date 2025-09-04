@@ -19,12 +19,12 @@ type MessageProcessor interface {
 type DefaultMessageProcessor struct{}
 
 // Process decodes the message, handles it, and send back the response.
-func (d *DefaultMessageProcessor) Process(message []byte, client *client.Client) ([]byte, error) {
+func (d *DefaultMessageProcessor) Process(message []byte, client *client.Client) ([]byte, int, error) {
 	slog.Info("Serializing the raw data from the client into a message format", "client", client.ID)
 	msg, err := protocol.DecodeMessage(message)
 	if err != nil {
 		slog.Error("Error parsing the message", "client", client.ID, "error", err)
-		return nil, err
+		return nil, 0, err
 	}
 
 	// Processing the client message, operations like WRITE & READ
@@ -45,20 +45,20 @@ func (d *DefaultMessageProcessor) Process(message []byte, client *client.Client)
 	response, err := protocol.CreateClientResponse(msg)
 	if err != nil {
 		slog.Error("Error creating response", "client", client.ID, "error", err)
-		return nil, err
+		return nil, 0, err
 	}
 
 	slog.Info("Encoding the client message response into protocol format", "client", client.ID)
-	rawResponse, _, err := protocol.EncodeResponseMessage(response)
+	rawResponse, header, err := protocol.EncodeResponseMessage(response)
 	if err != nil {
 		slog.Error("Error encoding response", "client", client.ID, "error", err)
-		return nil, err
+		return nil, 0, err
 	}
 
-	return rawResponse, nil
+	return rawResponse, header, nil
 }
 
-func processErrorResponse(err error, msg protocol.Message) ([]byte, error) {
+func processErrorResponse(err error, msg protocol.Message) ([]byte, int, error) {
 	// validate if the error contains some string pattern
 	if strings.Contains(err.Error(), "file not found") {
 		errCodeBytes := make([]byte, 2)
@@ -68,8 +68,8 @@ func processErrorResponse(err error, msg protocol.Message) ([]byte, error) {
 			errCodeBytes[0], errCodeBytes[1],
 			0x00, 0x00, 0x00, 0x00,
 			protocol.MessageEndChar,
-		}, nil
+		}, 0, nil
 	}
 
-	return nil, nil
+	return nil, 0, nil
 }

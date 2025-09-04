@@ -60,7 +60,6 @@ The client responses have the following format:
 - [errorCode (2 bytes)]
 - [payloadLength (4 bytes)]
 - [payload (payloadLength bytes)]
-- [endChar (1 byte)]
 
 Client response is composed for 7 header bytes and the payload.
 
