@@ -185,7 +185,7 @@ func decodeReadMessage(rawData []byte) (Message, error) {
 	slog.Info("Decoding a Read message from the client request")
 	var offset = 1
 
-	// Read the filename length from the rawData, length=1
+	// Read the filename length from the rawData, byte=1
 	filenameLength := int(rawData[offset])
 	offset += 1
 
@@ -200,7 +200,6 @@ func decodeReadMessage(rawData []byte) (Message, error) {
 		return Message{
 			MessageType:    MessageRead,
 			FilenameLength: filenameLength,
-			Filename:       "",
 		}, fmt.Errorf("the rawData does not contain enough bytes for the filename")
 	}
 
@@ -208,30 +207,12 @@ func decodeReadMessage(rawData []byte) (Message, error) {
 	filename := string(rawData[offset : offset+filenameLength])
 	offset += filenameLength
 
-	// Validate end-of-message byte exists and is correct
-	if offset >= len(rawData) {
-		return Message{
-			MessageType:    MessageRead,
-			FilenameLength: filenameLength,
-			Filename:       filename,
-		}, fmt.Errorf("incomplete message: missing end-of-message byte")
-	}
-	if rawData[offset] != MessageEndChar {
-		return Message{
-			MessageType:    MessageRead,
-			FilenameLength: filenameLength,
-			Filename:       filename,
-		}, fmt.Errorf("incomplete message: invalid end-of-message byte")
-	}
-
 	slog.Info("Read message decoded successfully")
 	// read the filename length
 	return Message{
 		MessageType:    MessageRead,
 		FilenameLength: filenameLength,
 		Filename:       filename,
-		RawData:        nil,
-		Size:           0,
 	}, nil
 }
 

@@ -9,225 +9,86 @@ import (
 
 // const MessageEndChar = 0x0A
 
-// func TestDecodeMessage(t *testing.T) {
-// 	tests := []struct {
-// 		name   string
-// 		input  []byte
-// 		output protocol.Message
-// 		fails  bool
-// 	}{
-// 		{
-// 			name:   "receive a wrong message with no enough data",
-// 			input:  []byte{0},
-// 			output: protocol.Message{},
-// 			fails:  true,
-// 		},
-// 		{
-// 			name:  "validate message type equals to Write on parse message",
-// 			input: []byte{2, 0, 0, 0, 0, 0},
-// 			output: protocol.Message{
-// 				MessageType:    protocol.MessageWrite,
-// 				FilenameLength: 0,
-// 				Filename:       "",
-// 				Size:           0,
-// 				RawData:        nil,
-// 			},
-// 			fails: true,
-// 		},
-// 		{
-// 			name:  "validate message type equals to Read on parse message",
-// 			input: []byte{1, 0, 0, 0, 0, 0, 0},
-// 			output: protocol.Message{
-// 				MessageType:    protocol.MessageRead,
-// 				FilenameLength: 0,
-// 				Filename:       "",
-// 				Size:           0,
-// 				RawData:        nil,
-// 			},
-// 			fails: true,
-// 		},
-// 		{
-// 			name: "parse correct the filename from the rawData",
-// 			input: []byte{
-// 				2,
-// 				8,
-// 				100, 97, 116, 97, 46, 116, 120, 116,
-// 				0, 0, 0, 0,
-// 			},
-// 			output: protocol.Message{
-// 				MessageType:    protocol.MessageWrite,
-// 				FilenameLength: 8,
-// 				Filename:       "data.txt",
-// 				Size:           0,
-// 				RawData:        nil,
-// 			},
-// 			fails: true,
-// 		},
-// 		{
-// 			name: "read the size of the message",
-// 			input: []byte{
-// 				2,
-// 				8,
-// 				100, 97, 116, 97, 46, 116, 120, 116,
-// 				0, 0, 0, 6,
-// 				0x00, 0x00,
-// 			},
-// 			output: protocol.Message{
-// 				MessageType:    protocol.MessageWrite,
-// 				FilenameLength: 8,
-// 				Filename:       "data.txt",
-// 				Size:           6,
-// 				RawData:        nil,
-// 			},
-// 			fails: true,
-// 		},
-// 		{
-// 			name: "error if the length of the message not match with the message length",
-// 			input: []byte{
-// 				2,
-// 				8,
-// 				100, 97, 116, 97, 46, 116, 120, 116,
-// 				0, 0, 0, 6,
-// 				0x48, 0x65, 0x6C, 0x6C, 0x6F, 0x20, 0x57, 0x6F, 0x72, 0x6C, 0x64,
-// 			},
-// 			output: protocol.Message{
-// 				MessageType:    protocol.MessageWrite,
-// 				FilenameLength: 8,
-// 				Filename:       "data.txt",
-// 				Size:           6,
-// 				RawData:        nil,
-// 			},
-// 			fails: true,
-// 		},
-// 		{
-// 			name: "parse write message correct",
-// 			input: []byte{
-// 				2,
-// 				8,
-// 				100, 97, 116, 97, 46, 116, 120, 116,
-// 				0, 0, 0, 0x0B,
-// 				0x48, 0x65, 0x6C, 0x6C, 0x6F, 0x20, 0x57, 0x6F, 0x72, 0x6C, 0x64,
-// 			},
-// 			output: protocol.Message{
-// 				MessageType:    protocol.MessageWrite,
-// 				FilenameLength: 8,
-// 				Filename:       "data.txt",
-// 				Size:           11,
-// 				RawData:        []byte{0x48, 0x65, 0x6C, 0x6C, 0x6F, 0x20, 0x57, 0x6F, 0x72, 0x6C, 0x64},
-// 			},
-// 			fails: false,
-// 		},
-// 		{
-// 			name: "error when parse read message with not valid filename length",
-// 			input: []byte{
-// 				0x01,             // messageType
-// 				0x03,             // filenameLength
-// 				0x64, 0x61, 0x74, // filename
-// 				MessageEndChar, // Any message needs to have an end character
-// 			},
-// 			output: protocol.Message{
-// 				MessageType:    protocol.MessageRead,
-// 				FilenameLength: 0x00,
-// 				Filename:       "",
-// 				RawData:        nil,
-// 				Size:           0x00,
-// 			},
-// 			fails: true,
-// 		},
-// 		{
-// 			name: "error if filename does not match with the filenameLength",
-// 			input: []byte{
-// 				0x01,                               // messageType
-// 				0x08,                               // filenameLength
-// 				0x64, 0x61, 0x74, 0x61, 0x2E, 0x74, // filename
-// 				MessageEndChar, // Any message needs to have an end character
-// 			},
-// 			output: protocol.Message{
-// 				MessageType:    protocol.MessageRead,
-// 				FilenameLength: 0x08,
-// 				Filename:       "",
-// 				RawData:        nil,
-// 				Size:           0x00,
-// 			},
-// 			fails: true,
-// 		},
-// 		{
-// 			name: "parse read message correct",
-// 			input: []byte{
-// 				0x01,                                           // messageType
-// 				0x08,                                           // filenameLength
-// 				0x64, 0x61, 0x74, 0x61, 0x2E, 0x74, 0x78, 0x74, // filename
-// 				MessageEndChar, // Any message needs to have an end character
-// 			},
-// 			output: protocol.Message{
-// 				MessageType:    protocol.MessageRead,
-// 				FilenameLength: 0x08,
-// 				Filename:       "data.txt",
-// 				RawData:        nil,
-// 				Size:           0x00,
-// 			},
-// 			fails: false,
-// 		},
-// 		{
-// 			name: "parse delete message correct",
-// 			input: []byte{
-// 				0x04,                                           // messageType
-// 				0x08,                                           // filenameLength
-// 				0x64, 0x61, 0x74, 0x61, 0x2E, 0x74, 0x78, 0x74, // filename
-// 				MessageEndChar, // Any message needs to have an end character
-// 			},
-// 			output: protocol.Message{
-// 				MessageType:    protocol.MessageDelete,
-// 				FilenameLength: 0x08,
-// 				Filename:       "data.txt",
-// 				RawData:        nil,
-// 				Size:           0x00,
-// 			},
-// 			fails: false,
-// 		},
-// 		{
-// 			name: "return error with not valid filename length in Delete message",
-// 			input: []byte{
-// 				0x04,                               // messageType
-// 				0x06,                               // filenameLength
-// 				0x64, 0x61, 0x2E, 0x74, 0x78, 0x74, // filename not valid=da.txt
-// 				MessageEndChar, // Any message needs to have an end character
-// 			},
-// 			output: protocol.Message{
-// 				MessageType: protocol.MessageDelete,
-// 			},
-// 			fails: true,
-// 		},
-// 		{
-// 			name: "return error with not valid filename in Delete message",
-// 			input: []byte{
-// 				0x04,                                                 // messageType
-// 				0x08,                                                 // filenameLength
-// 				0x64, 0x61, 0x74, 0x61, 0x61, 0x2E, 0x74, 0x78, 0x74, // filename not valid=da.txt
-// 				MessageEndChar, // Any message needs to have an end character
-// 			},
-// 			output: protocol.Message{
-// 				MessageType:    protocol.MessageDelete,
-// 				FilenameLength: 0x08,
-// 				Filename:       "dataa.tx",
-// 			},
-// 			fails: true,
-// 		},
-// 	}
+func TestDecodeReadMessage(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  []byte
+		output protocol.Message
+		fails  bool
+	}{
+		{
+			name:   "error when message has insufficient data",
+			input:  []byte{0},
+			output: protocol.Message{},
+			fails:  true,
+		},
+		{
+			name: "error when message type is Read but data is invalid",
+			input: []byte{
+				0x01,
+				0,
+				0, 0, 0, 0,
+			},
+			output: protocol.Message{
+				MessageType:    protocol.MessageRead,
+				FilenameLength: 0,
+				Filename:       "",
+				Size:           0,
+				RawData:        nil,
+			},
+			fails: true,
+		},
+		{
+			name:  "error when message type is Read but data is invalid",
+			input: []byte{0x01, 0, 0, 0, 0, 0, 0},
+			output: protocol.Message{
+				MessageType:    protocol.MessageRead,
+				FilenameLength: 0,
+			},
+			fails: true,
+		},
+		{
+			name: "error when filename length exceeds available data",
+			input: []byte{
+				0x01,                               // messageType
+				0x08,                               // filenameLen
+				0x64, 0x61, 0x2E, 0x74, 0x78, 0x74, // filename
+			},
+			output: protocol.Message{
+				MessageType:    protocol.MessageRead,
+				FilenameLength: 0x08,
+			},
+			fails: true,
+		},
+		{
+			name: "decode valid read message into Message object",
+			input: []byte{
+				0x01,                                           // messageType
+				0x8,                                            // filenameLength
+				0x64, 0x61, 0x74, 0x61, 0x2E, 0x74, 0x78, 0x74, // filename
+			},
+			output: protocol.Message{
+				MessageType:    protocol.MessageRead,
+				FilenameLength: 8,
+				Filename:       "data.txt",
+			},
+			fails: false,
+		},
+	}
 
-// 	for _, test := range tests {
-// 		t.Run(test.name, func(t *testing.T) {
-// 			message, err := protocol.DecodeMessage(test.input)
-// 			if test.fails {
-// 				assert.NotNil(t, err)
-// 			} else {
-// 				assert.Nil(t, err)
-// 			}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			message, err := protocol.DecodeMessage(test.input)
+			if test.fails {
+				assert.NotNil(t, err)
+			} else {
+				assert.Nil(t, err)
+			}
 
-// 			assert.Equal(t, test.output, message)
-// 		})
-// 	}
-// }
+			assert.Equal(t, test.output, message)
+		})
+	}
+}
 
 // func TestCreateClientResponse(t *testing.T) {
 // 	type args struct {
