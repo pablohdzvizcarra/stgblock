@@ -69,7 +69,7 @@ func decodeUpdateMessage(rawData []byte) (Message, error) {
 	if filenameLen < MIN_FILENAME_LENGTH {
 		return Message{
 			MessageType: MessageUpdate,
-		}, fmt.Errorf("invalid filenameLength=%d, filename length needs to be > 8 bytes", filenameLen)
+		}, fmt.Errorf("invalid filenameLen=%d, filename length needs to be > 8 bytes", filenameLen)
 	}
 
 	// validates byte to avoid buffer underflow
@@ -105,18 +105,8 @@ func decodeUpdateMessage(rawData []byte) (Message, error) {
 		}, fmt.Errorf("file size must be > 0")
 	}
 
-	messageEndChar := rawData[len(rawData)-1]
-	if messageEndChar != MessageEndChar {
-		return Message{
-			MessageType:    MessageUpdate,
-			FilenameLength: filenameLen,
-			Filename:       filename,
-			Size:           fileSize,
-		}, fmt.Errorf("the update frame does not contain a valid end character got=%b, want=%d", messageEndChar, MessageEndChar)
-	}
-
 	// Read the message content from the raw data
-	messageContent := rawData[offset : len(rawData)-1]
+	messageContent := rawData[offset:]
 
 	// With this validation we are avoiding byte overflow vulnerability
 	if uint32(len(messageContent)) != fileSize {

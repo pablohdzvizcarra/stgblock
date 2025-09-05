@@ -437,65 +437,81 @@ func TestEncodeResponseMessage(t *testing.T) {
 // 	}
 // }
 
-// func TestDecodeUpdateMessage(t *testing.T) {
-// 	tests := []struct {
-// 		name    string
-// 		arg     []byte
-// 		want    protocol.Message
-// 		wantErr bool
-// 	}{
-// 		{
-// 			name: "error when update request does not have enough bytes",
-// 			arg: []byte{
-// 				0x03,                                           // message type
-// 				0x08,                                           // filename length
-// 				0x64, 0x61, 0x74, 0x61, 0x2E, 0x74, 0x78, 0x74, // filename
-// 				0x00, 0x00, 0x00, 0x0D, // size
-// 				0x62, 0x6C, 0x6F, 0x63, 0x6B, 0x2D, 0x73, 0x74, 0x6F, 0x72, 0x61, 0x67, 0x65, // data
-// 				MessageEndChar,
-// 			},
-// 			want: protocol.Message{
-// 				MessageType:    protocol.MessageUpdate,
-// 				FilenameLength: 8,
-// 				Filename:       "data.txt",
-// 				Size:           13,
-// 				RawData:        []byte{0x62, 0x6C, 0x6F, 0x63, 0x6B, 0x2D, 0x73, 0x74, 0x6F, 0x72, 0x61, 0x67, 0x65},
-// 			},
-// 			wantErr: false,
-// 		},
-// 		{
-// 			name: "error when file size is zero",
-// 			arg: []byte{
-// 				0x03,                                           // message type
-// 				0x08,                                           // filename length
-// 				0x64, 0x61, 0x74, 0x61, 0x2E, 0x74, 0x78, 0x74, // filename
-// 				0x00, 0x00, 0x00, 0x00, // size = 0
-// 				MessageEndChar,
-// 			},
-// 			want: protocol.Message{
-// 				MessageType:    protocol.MessageUpdate,
-// 				FilenameLength: 8,
-// 				Filename:       "data.txt",
-// 				Size:           0,
-// 			},
-// 			wantErr: true,
-// 		},
-// 	}
+func TestDecodeUpdateMessage(t *testing.T) {
+	tests := []struct {
+		name    string
+		arg     []byte
+		want    protocol.Message
+		wantErr bool
+	}{
+		{
+			name: "error when update request does not have enough bytes",
+			arg: []byte{
+				0x03,                                           // message type
+				0x08,                                           // filename length
+				0x64, 0x61, 0x74, 0x61, 0x2E, 0x74, 0x78, 0x74, // filename
+				0x00, 0x00, 0x00, 0x0D, // size
+				0x62, 0x6C, 0x6F, 0x63, 0x6B, 0x2D, 0x73, 0x74, 0x6F, 0x72, 0x61, 0x67, 0x65, // data
+			},
+			want: protocol.Message{
+				MessageType:    protocol.MessageUpdate,
+				FilenameLength: 8,
+				Filename:       "data.txt",
+				Size:           13,
+				RawData:        []byte{0x62, 0x6C, 0x6F, 0x63, 0x6B, 0x2D, 0x73, 0x74, 0x6F, 0x72, 0x61, 0x67, 0x65},
+			},
+			wantErr: false,
+		},
+		{
+			name: "error when file size is zero",
+			arg: []byte{
+				0x03,                                           // message type
+				0x08,                                           // filename length
+				0x64, 0x61, 0x74, 0x61, 0x2E, 0x74, 0x78, 0x74, // filename
+				0x00, 0x00, 0x00, 0x00, // size = 0
+			},
+			want: protocol.Message{
+				MessageType:    protocol.MessageUpdate,
+				FilenameLength: 8,
+				Filename:       "data.txt",
+				Size:           0,
+			},
+			wantErr: true,
+		},
+		{
+			name: "should decode a UPDATE message",
+			arg: []byte{
+				0x03,                                           // messageType
+				0x08,                                           // filenameLen
+				0x64, 0x61, 0x74, 0x61, 0x2E, 0x74, 0x78, 0x74, // filename
+				0x00, 0x00, 0x00, 0x15, // fileSize
+				0x77, 0x65, 0x6C, 0x63, 0x6F, 0x6D, 0x65, 0x20, 0x74, 0x6F, 0x20, 0x74, 0x68, 0x65, 0x20, 0x6A, 0x75, 0x6E, 0x67, 0x6C, 0x65, // fileContent
+			},
+			want: protocol.Message{
+				MessageType:    protocol.MessageUpdate,
+				FilenameLength: 0x08,
+				Filename:       "data.txt",
+				Size:           0x15,
+				RawData:        []byte{0x77, 0x65, 0x6C, 0x63, 0x6F, 0x6D, 0x65, 0x20, 0x74, 0x6F, 0x20, 0x74, 0x68, 0x65, 0x20, 0x6A, 0x75, 0x6E, 0x67, 0x6C, 0x65},
+			},
+			wantErr: false,
+		},
+	}
 
-// 	for _, test := range tests {
-// 		t.Run(test.name, func(t *testing.T) {
-// 			message, err := protocol.DecodeMessage(test.arg)
-// 			if test.wantErr {
-// 				assert.NotNil(t, err)
-// 				// Verify the specific error message for zero file size
-// 				if test.name == "error when file size is zero" {
-// 					assert.Contains(t, err.Error(), "must be > 0")
-// 				}
-// 			} else {
-// 				assert.Nil(t, err)
-// 			}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			message, err := protocol.DecodeMessage(test.arg)
+			if test.wantErr {
+				assert.NotNil(t, err)
+				// Verify the specific error message for zero file size
+				if test.name == "error when file size is zero" {
+					assert.Contains(t, err.Error(), "must be > 0")
+				}
+			} else {
+				assert.Nil(t, err)
+			}
 
-// 			assert.Equal(t, test.want, message)
-// 		})
-// 	}
-// }
+			assert.Equal(t, test.want, message)
+		})
+	}
+}
