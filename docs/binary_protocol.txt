@@ -168,8 +168,8 @@ READ MESSAGES FROM CLIENT
 Format of the READ message request sent by a client:
 
 - [messageType 1 byte]
-- [filenameLength 1 byte]
-- [filename (filenameLength bytes)]
+- [filenameLen 1 byte]
+- [filename (filenameLen bytes)]
 
 -------------------
 messageType
@@ -178,17 +178,22 @@ messageType
 
 
 -------------------
-filenameLength
+filenameLen
 - 1 byte representing the length of the filename in bytes.
 
 -------------------
 filename
-- (filenameLength bytes) the name of the file to read.
+- (filenameLen bytes) the name of the file to read.
 
--------------------
-endChar
-- 1 byte indicating the end of the message (0x0A - \n).
+READ RESPONSE MESSAGE
+------------------------------------------------------------
 
+the client response have the following format:
+
+- [status (1 byte)]
+- [error (2 bytes)]
+- [fileSize (4 bytes)]
+- [fileData (fileSize bytes)]
 
 ========================================================================================
 DELETE MESSAGE FROM CLIENT
@@ -238,11 +243,10 @@ UPDATE MESSAGE FROM CLIENT
 Format of the UPDATE message request sent by a client:
 
 - [messageType 1 byte]
-- [filenameLength 1 byte]
-- [filename (filenameLength bytes)]
-- [size 4 bytes]
-- [rawData (size bytes)]
-- [endChar 1 byte]
+- [filenameLen 1 byte]
+- [filename (filenameLen bytes)]
+- [fileSize 4 bytes]
+- [fileData (fileSize bytes)]
 
 
 -------------------
@@ -252,37 +256,31 @@ messageType
 - 0x03: Update
 - 0x04: Delete
 
-
 -------------------
-filenameLength
+filenameLen
 - 1 byte representing the length of the filename in bytes.
 
 -------------------
 filename
-- (filenameLength bytes) the name of the file to update.
+- (filenameLen bytes) the name of the file to update.
 
 -------------------
-size
-- 4 bytes representing the size of the rawData in bytes.
+fileSize
+- 4 bytes representing the size of the fileData in bytes.
 
 -------------------
-rawData
-- (size bytes) the actual data to be updated.
-
--------------------
-endChar
-- 1 byte indicating the end of the message (0x0A - \n).
+fileData
+- (fileSize bytes) the actual data to be updated.
 
 
 UPDATE RESPONSE MESSAGE
 ------------------------------------------------------------
 The client responses have the following format:
 
-- [statusCode(1 byte)] 
-- [errorCode (2 bytes)]
-- [payloadLength (4 bytes)]
-- [payload (payloadLength bytes)]
-- [endChar (1 byte)]
+- [status (1 byte)] 
+- [error (2 bytes)]
+- [bodyLen (4 bytes)]
+- [body (bodyLen bytes)]
 
 ========================================================================================
 DESIGN ISSUES
