@@ -515,3 +515,55 @@ func TestDecodeUpdateMessage(t *testing.T) {
 		})
 	}
 }
+func TestDecodeDeleteMessage(t *testing.T) {
+	tests := []struct {
+		name    string
+		arg     []byte
+		want    protocol.Message
+		wantErr bool
+	}{
+		{
+			name: "error when decode a delete message with invalid filename",
+			arg: []byte{
+				0x03,                         // message type
+				0x05,                         // filename length
+				0x64, 0x2E, 0x74, 0x78, 0x74, // filename
+			},
+			want: protocol.Message{
+				MessageType: protocol.MessageUpdate,
+			},
+			wantErr: true,
+		},
+		{
+			name: "should decode a DELETE message",
+			arg: []byte{
+				0x04,                                           // messageType
+				0x08,                                           // filenameLen
+				0x64, 0x61, 0x74, 0x61, 0x2E, 0x74, 0x78, 0x74, // filename
+			},
+			want: protocol.Message{
+				MessageType:    protocol.MessageDelete,
+				FilenameLength: 0x08,
+				Filename:       "data.txt",
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			message, err := protocol.DecodeMessage(test.arg)
+			if test.wantErr {
+				assert.NotNil(t, err)
+				// Verify the specific error message for zero file size
+				if test.name == "error when file size is zero" {
+					assert.Contains(t, err.Error(), "must be > 0")
+				}
+			} else {
+				assert.Nil(t, err)
+			}
+
+			assert.Equal(t, test.want, message)
+		})
+	}
+}
