@@ -202,10 +202,8 @@ DELETE MESSAGE FROM CLIENT
 Format of the DELETE message request sent by a client:
 
 - [messageType 1 byte]
-- [filenameLength 1 byte]
-- [filename (filenameLength bytes)]
-- [endChar 1 byte]
-
+- [filenameLen 1 byte]
+- [filename (filenameLen bytes)]
 
 -------------------
 messageType
@@ -213,28 +211,26 @@ messageType
 - 0x02: Write
 - 0x04: Delete
 
-
 -------------------
-filenameLength
+filenameLen
 - 1 byte representing the length of the filename in bytes.
 
 -------------------
 filename
-- (filenameLength bytes) the name of the file to delete.
+- (filenameLen bytes) the name of the file to delete.
 
--------------------
-endChar
-- 1 byte indicating the end of the message (0x0A - \n).
 
 DELETE RESPONSE MESSAGE
 ------------------------------------------------------------
 
 the client response have the following format:
 
-- [statusCode(1 byte)]
-- [errorCode (2 bytes)]
-- [payloadLength (4 bytes)]
-- [endChar (1 byte)]
+- [status(1 byte)]
+- [error (2 bytes)]
+- [bodyLen (4 bytes)]
+- [body (bodyLen bytes)] only if status is 0x01 (Error)
+
+Delete response is composed for 7 header bytes and the payload.
 
 ========================================================================================
 UPDATE MESSAGE FROM CLIENT

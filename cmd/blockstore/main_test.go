@@ -624,6 +624,173 @@ func TestSendUpdateMessage(t *testing.T) {
 		})
 	}
 }
+func TestSendDeleteMessage(t *testing.T) {
+	// =================== Start the main application server for testing ===================
+	listener, err := server.StartApplication()
+	if err != nil {
+		t.Fatalf("failed to start the application: %v", err)
+	}
+	defer listener.Close()
+
+	// Allow the server a moment to start
+	time.Sleep(100 * time.Millisecond)
+	// =====================================================================================
+
+	// Create the client to send messages to the application
+	conn, err := startTestTCPClient()
+	if err != nil {
+		t.FailNow()
+	}
+	defer conn.Close()
+
+	// ================================HANDSHAKE=============================================
+	// Perform HANDSHAKE before sending the WRITE message
+	handshakeMessage := []byte{
+		0x53, 0x54, 0x47, // magic protocol number
+		0x01,                                           // protocol version
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // reserved bytes
+		0x04,                   // client id length
+		0x44, 0x4F, 0x39, 0x31, // client id
+		0x0A, // endChar
+	}
+	_, err = conn.Write(handshakeMessage)
+	if err != nil {
+		t.Fatalf("failed to send handshake message: %v", err)
+	}
+
+	_ = conn.SetReadDeadline(time.Now().Add(2 * time.Second)) // avoid hanging if no '\n'
+	reader := bufio.NewReader(conn)
+	_, err = reader.ReadBytes('\n') // Read handshake response
+	if err != nil {
+		t.Fatalf("failed to read handshake response: %v", err)
+	}
+	// =====================================================================================
+
+	type Args struct {
+		header  []byte
+		payload []byte
+	}
+
+	type Want struct {
+		header   int
+		response []byte
+	}
+
+	tests := []struct {
+		name    string
+		args    Args
+		want    Want
+		wantErr bool
+	}{
+		{
+			name: "client send WRITE message",
+			args: Args{
+				payload: []byte{
+					0x02,                                           // WRITE command
+					0x08,                                           // filename length
+					0x64, 0x61, 0x74, 0x61, 0x2E, 0x74, 0x78, 0x74, // filename: "data.txt"
+					0x00, 0x00, 0x00, 0x0B, // payload length
+					0x48, 0x65, 0x6C, 0x6C, 0x6F, 0x20, 0x57, 0x6F, 0x72, 0x6C, 0x64, // payload: "Hello World"
+				},
+				header: []byte{0x00, 0x00, 0x00, 0x19},
+			},
+			want: Want{
+				header: 7,
+				response: []byte{
+					0x00,       // status
+					0x00, 0x00, // errorCode
+					0x00, 0x00, 0x00, 0x00, // payloadLength
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "client send a DELETE message",
+			args: Args{
+				header: []byte{0x00, 0x00, 0x00, 0x0A},
+				payload: []byte{
+					0x04,                                           // messageType
+					0x08,                                           // filenameLen
+					0x64, 0x61, 0x74, 0x61, 0x2E, 0x74, 0x78, 0x74, // filename
+				},
+			},
+			want: Want{
+				header: 7,
+				response: []byte{
+					0x00,       // status
+					0x00, 0x00, // error
+					0x00, 0x00, 0x00, 0x00, // bodyLen
+				},
+			},
+		},
+		// {
+		// 	name: "client send READ message",
+		// 	args: Args{
+		// 		header: []byte{0x00, 0x00, 0x00, 0x0A},
+		// 		payload: []byte{
+		// 			0x01,                                           // messageType
+		// 			0x08,                                           // filenameLength
+		// 			0x64, 0x61, 0x74, 0x61, 0x2E, 0x74, 0x78, 0x74, // filename
+		// 		},
+		// 	},
+		// 	want: Want{
+		// 		header: 7 + 11,
+		// 		response: []byte{
+		// 			0x00,       // status
+		// 			0x00, 0x00, // error
+		// 			0x00, 0x00, 0x00, 0x0B, // fileSize
+		// 			0x48, 0x65, 0x6C, 0x6C, 0x6F, 0x20, 0x57, 0x6F, 0x72, 0x6C, 0x64, // fileData
+		// 		},
+		// 	},
+		// 	wantErr: false,
+		// },
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Send header information to server
+			_, err = conn.Write(tt.args.header)
+			if err != nil {
+				t.Fatal("failed to write to the server")
+			}
+			if tt.wantErr {
+				assert.NotNil(t, err)
+			} else {
+				assert.Nil(t, err)
+			}
+
+			// Send payload to server
+			_, err = conn.Write(tt.args.payload)
+			if err != nil {
+				t.Fatal("failed to write to the server")
+			}
+			if tt.wantErr {
+				assert.NotNil(t, err)
+			} else {
+				assert.Nil(t, err)
+			}
+
+			_ = conn.SetReadDeadline(time.Now().Add(2 * time.Second))
+
+			// Read header response (4 bytes)
+			headerResp := make([]byte, 4)
+			_, err := io.ReadFull(reader, headerResp)
+			assert.Nil(t, err)
+
+			payloadLength := binary.BigEndian.Uint32(headerResp)
+			assert.Equal(t, tt.want.header, int(payloadLength))
+
+			// Read the server response
+			if payloadLength > 0 {
+				serverResp := make([]byte, payloadLength)
+				_, err := io.ReadFull(reader, serverResp)
+				assert.Nil(t, err)
+
+				assert.Equal(t, tt.want.response, serverResp)
+			}
+		})
+	}
+}
 
 // func TestSaveBigFileWriteMessage(t *testing.T) {
 // 	// =================== Start the main application server for testing ===================
@@ -913,163 +1080,6 @@ func TestSendUpdateMessage(t *testing.T) {
 // 			}
 
 // 			assert.Equal(t, test.want, response)
-// 		})
-// 	}
-// }
-
-// func TestUpdateFile(t *testing.T) {
-// 	// =================== Start the main application server for testing ===================
-// 	listener, err := server.StartApplication()
-// 	if err != nil {
-// 		t.Fatalf("failed to start the application: %v", err)
-// 	}
-// 	defer listener.Close()
-// 	// =====================================================================================
-
-// 	// Allow the server a moment to start
-// 	time.Sleep(100 * time.Millisecond)
-
-// 	// Create the client to send messages to the application
-// 	conn, err := startTestTCPClient()
-// 	if err != nil {
-// 		t.FailNow()
-// 	}
-// 	defer conn.Close()
-
-// 	// ============================ HANDSHAKE ==============================================
-// 	handshakeMessage := []byte{
-// 		0x53, 0x54, 0x47, // magic protocol number
-// 		0x01,                                           // protocol version
-// 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // reserved bytes
-// 		0x04,                   // client id length
-// 		0x44, 0x4F, 0x39, 0x35, // client id
-// 		0x0A, // endChar
-// 	}
-// 	_, err = conn.Write(handshakeMessage)
-// 	if err != nil {
-// 		t.Fatalf("failed to send handshake message: %v", err)
-// 	}
-
-// 	_ = conn.SetReadDeadline(time.Now().Add(2 * time.Second)) // avoid hanging if no '\n'
-// 	reader := bufio.NewReader(conn)
-// 	_, err = reader.ReadBytes('\n') // Read handshake response
-// 	if err != nil {
-// 		t.Fatalf("failed to read handshake response: %v", err)
-// 	}
-// 	// ====================================================================================
-
-// 	tests := []struct {
-// 		name    string
-// 		args    []byte
-// 		want    []byte
-// 		wantErr bool
-// 	}{
-// 		{
-// 			name: "WRITE a file",
-// 			args: []byte{
-// 				0x02,                                                             // WRITE command
-// 				0x0B,                                                             // filename length
-// 				0x72, 0x65, 0x70, 0x6F, 0x72, 0x74, 0x74, 0x2E, 0x63, 0x73, 0x76, // filename
-// 				0x00, 0x00, 0x00, 0x17, // payload length
-// 				0x63, 0x6F, 0x6D, 0x70, 0x61, 0x6E, 0x79, 0x20, 0x65, 0x78, 0x70, 0x65, 0x6E, 0x73, 0x65, 0x73, 0x3A, 0x20, 0x32, 0x30, 0x30, 0x30, 0x30, // payload
-// 				0x0A, // end character
-// 			},
-// 			want: []byte{
-// 				0x00,       // statusCode
-// 				0x00, 0x00, // errorCode
-// 				0x00, 0x00, 0x00, 0x00, // payload length
-// 				0x0A, // end character
-// 			},
-// 			wantErr: false,
-// 		},
-// 		{
-// 			name: "READ a file",
-// 			args: []byte{
-// 				0x01,                                                             // WRITE command
-// 				0x0B,                                                             // filename length
-// 				0x72, 0x65, 0x70, 0x6F, 0x72, 0x74, 0x74, 0x2E, 0x63, 0x73, 0x76, // filename
-// 				0x0A, // end character
-// 			},
-// 			want: []byte{
-// 				0x00,       // statusCode
-// 				0x00, 0x00, // errorCode
-// 				0x00, 0x00, 0x00, 0x17, // payload length
-// 				0x63, 0x6F, 0x6D, 0x70, 0x61, 0x6E, 0x79, 0x20, 0x65, 0x78, 0x70, 0x65, 0x6E, 0x73, 0x65, 0x73, 0x3A, 0x20, 0x32, 0x30, 0x30, 0x30, 0x30, // payload
-// 				0x0A, // end character
-// 			},
-// 			wantErr: false,
-// 		},
-// 		{
-// 			name: "UPDATE a file",
-// 			args: []byte{
-// 				0x03,                                                             // WRITE command
-// 				0x0B,                                                             // filename length
-// 				0x72, 0x65, 0x70, 0x6F, 0x72, 0x74, 0x74, 0x2E, 0x63, 0x73, 0x76, // filename
-// 				0x00, 0x00, 0x00, 0x17, // payload length
-// 				0x63, 0x6F, 0x6D, 0x70, 0x61, 0x6E, 0x79, 0x20, 0x65, 0x78, 0x70, 0x65, 0x6E, 0x73, 0x65, 0x73, 0x3A, 0x20, 0x34, 0x30, 0x30, 0x30, 0x30, // payload
-// 				0x0A, // end character
-// 			},
-// 			want: []byte{
-// 				0x00,       // statusCode
-// 				0x00, 0x00, // errorCode
-// 				0x00, 0x00, 0x00, 0x17, // payload length
-// 				0x63, 0x6F, 0x6D, 0x70, 0x61, 0x6E, 0x79, 0x20, 0x65, 0x78, 0x70, 0x65, 0x6E, 0x73, 0x65, 0x73, 0x3A, 0x20, 0x34, 0x30, 0x30, 0x30, 0x30, // payload
-// 				0x0A, // end character
-// 			},
-// 			wantErr: false,
-// 		},
-// 		{
-// 			name: "READ a file after update",
-// 			args: []byte{
-// 				0x01,                                                             // WRITE command
-// 				0x0B,                                                             // filename length
-// 				0x72, 0x65, 0x70, 0x6F, 0x72, 0x74, 0x74, 0x2E, 0x63, 0x73, 0x76, // filename
-// 				0x0A, // end character
-// 			},
-// 			want: []byte{
-// 				0x00,       // statusCode
-// 				0x00, 0x00, // errorCode
-// 				0x00, 0x00, 0x00, 0x17, // payload length
-// 				0x63, 0x6F, 0x6D, 0x70, 0x61, 0x6E, 0x79, 0x20, 0x65, 0x78, 0x70, 0x65, 0x6E, 0x73, 0x65, 0x73, 0x3A, 0x20, 0x34, 0x30, 0x30, 0x30, 0x30, // payload
-// 				0x0A, // end character
-// 			},
-// 			wantErr: false,
-// 		},
-// 		{
-// 			name: "DELETE a file",
-// 			args: []byte{
-// 				0x04,                                                             // DELETE command
-// 				0x0B,                                                             // filename length
-// 				0x72, 0x65, 0x70, 0x6F, 0x72, 0x74, 0x74, 0x2E, 0x63, 0x73, 0x76, // filename
-// 				0x0A, // endChar
-// 			},
-// 			want: []byte{
-// 				0x00,
-// 				0x00, 0x00,
-// 				0x00, 0x00, 0x00, 0x00,
-// 				0x0A,
-// 			},
-// 			wantErr: false,
-// 		},
-// 	}
-
-// 	for _, tt := range tests {
-// 		time.Sleep(1 * time.Second)
-// 		t.Run(tt.name, func(t *testing.T) {
-// 			_, err := conn.Write(tt.args)
-// 			if err != nil {
-// 				t.Fatal("failed to send message to server")
-// 			}
-// 			if tt.wantErr {
-// 				assert.NotNil(t, err)
-// 			} else {
-// 				assert.Nil(t, err)
-// 			}
-
-// 			_ = conn.SetReadDeadline(time.Now().Add(2 * time.Second))
-// 			resp, err := reader.ReadBytes('\n')
-// 			assert.Nil(t, err)
-// 			assert.Equal(t, tt.want, resp)
 // 		})
 // 	}
 // }
